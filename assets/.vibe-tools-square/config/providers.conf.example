@@ -1,0 +1,43 @@
+# Vibe-Tools Square AI Model Configurations
+# Syntax: --model=provider/model-name
+# Example: --model=gemini/gemini-2-0-flash
+# Example: --model=anthropic/claude-3-5-sonnet
+#
+# MAPPING LOGIC:
+# kebab-case → UPPER_SNAKE_CASE conversion
+# anthropic/claude-3-5-sonnet → PROVIDER_ANTHROPIC + MODEL_ANTHROPIC_CLAUDE_3_5_SONNET
+# gemini/gemini-2-0-flash → PROVIDER_GEMINI + MODEL_GEMINI_GEMINI_2_0_FLASH
+# openai/o3-mini → PROVIDER_OPENAI + MODEL_OPENAI_O3_MINI
+
+# PROVIDERS (reusable across models)
+PROVIDER_ANTHROPIC="anthropic"
+PROVIDER_GEMINI="gemini"
+PROVIDER_OPENAI="openai"
+PROVIDER_OPENROUTER="openrouter" 
+PROVIDER_PERPLEXITY="perplexity"
+
+# MODELS 
+
+# Anthropic
+MODEL_ANTHROPIC_CLAUDE_3_5_SONNET="claude-3-5-sonnet-20241022" 
+
+# Gemini
+MODEL_GEMINI_GEMINI_2_0_FLASH="gemini-2.0-flash"
+
+# OpenAI
+MODEL_OPENAI_O3_MINI="o3-mini"
+
+# Openrouter
+MODEL_OPENROUTER_GEMINI_2_0_FLASH="google/gemini-2.0-flash-001"
+
+# Perplexity
+MODEL_PERPLEXITY_SONAR=""
+
+# Usage Examples:
+# Monomodel:
+# run-prompt ask --model=anthropic/claude-3-5-sonnet --template=question
+# run-prompt ask --model=gemini/gemini-2-0-flash --template=question
+# run-prompt ask --model=openrouter/gemini-2-0-flash --template=question
+# 
+# Multimodel:
+# run-prompt plan --file-model=gemini/gemini-2-0-flash --thinking-model=openai/o3-mini --template=strategy
