@@ -1,0 +1,23 @@
+Hello! This is a simple test template for the vibe-tools-square ask task.
+
+Today's date: {{TODAY_DATE}}
+Current time: {{TODAY_DATETIME}}
+
+Template Parameters:
+- Name: {{NAME}}
+- Project: {{PROJECT}}
+- Description: {{DESCRIPTION}}
+
+File Content Injection Test:
+{{DOCUMENTATION}}
+
+This template demonstrates:
+1. Date/time placeholders
+2. String parameter replacement
+3. File content injection (if --documentation=file:path/to/file.md is used)
+
+You can test this template with commands like:
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --project="My Project" --description="Testing the new modular system"
+
+Or with file injection:
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --documentation=file:README.md

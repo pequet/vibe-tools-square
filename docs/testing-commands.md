@@ -1,217 +1,191 @@
-# Testing Commands for Vibe-Tools Square
+# Testing Commands - Vibe-Tools Square
 
-This document provides commands you can use to test the functionality of `vibe-tools-square` at each development phase.
+This document provides commands to test the functionality of `vibe-tools-square` at each development phase.
 
-## Configuration File Organization
+## Phase 1 Ask Implementation Tests ✅ COMPLETED
 
-### Project Structure
-```
-assets/.vibe-tools-square/
-├── config/                           # Template configs (copied during install)
-│   ├── default.conf                  # Environment variables and settings
-│   ├── providers.conf.example       # AI provider presets template
-│   └── templates/                    # Template collection
-```
+The `ask` task is fully implemented with template processing, parameter replacement, and proper shell escaping.
 
-### Runtime Structure  
-```
-~/.vibe-tools-square/
-├── config/                          # User's runtime configs (customizable)
-│   ├── default.conf                 # Copied from assets
-│   ├── providers.conf.example       # Copied from assets  
-│   ├── providers.conf               # USER CREATES with their preferences
-│   └── templates/                   # Copied from assets
-```
-
-**Important**: 
-- `default.conf` contains system defaults and gets copied during install
-- `providers.conf.example` is a template - users copy it to `providers.conf` and customize with their AI provider preferences
-
-## Installation Tests
-
-### 1. Install to Default Location
+### Basic Ask with String Parameters (Dry Run)
 ```bash
-./scripts/install.sh
-# Expected: Creates ~/.vibe-tools-square/ with all files and global run-prompt.sh symlink
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --project="My Project" --description="Testing basic parameters"
 ```
 
-### 2. Install to Custom Location  
+### Ask with File Content Injection (Dry Run)
 ```bash
-./scripts/install.sh --target=~/custom-vibe-tools
-# Expected: Creates ~/custom-vibe-tools/ and global wrapper script with correct path
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --documentation=file:README.md
 ```
 
-### 2b. Test Multiple Installations (Overwrites)
+### Ask with Custom Output File (Dry Run)
 ```bash
-# Install to default (creates symlink)
-./scripts/install.sh
-
-# Install to custom (should remove symlink, create wrapper)
-./scripts/install.sh --target=~/custom-location
-
-# Install back to default (should remove wrapper, create symlink)
-./scripts/install.sh
-
-# Expected: Each install cleanly replaces the previous global command
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --output-file=test-output.md
 ```
 
-### 3. Verify Installation Structure
+### Ask with Provider Parameter (Dry Run)
 ```bash
-ls -la ~/.vibe-tools-square/
-# Expected: config/, content/, logs/, output/, tasks/, README.md
-
-ls -la ~/.vibe-tools-square/tasks/
-# Expected: analyze-codebase.conf, ask.conf, code-review.conf, feature-planning.conf
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --provider=gemini
 ```
 
-## Phase 1 Tests (Current Status)
-
-### Basic Functionality Tests
-
-**Test 1: Usage Display**
+### Ask Actual Execution (`--go` flag)
 ```bash
-./run-prompt.sh
-# Expected: Shows usage information and exits with code 1
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --project="Real Test" --go
 ```
 
-**Test 2: List Available Tasks**
+### Ask with Multiple File Injection
 ```bash
-./run-prompt.sh --list-tasks
-# Expected: Shows dynamic list of tasks from runtime environment
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --documentation=file:README.md,docs/special-characters-guide.md
 ```
 
-**Test 3: Task Execution (Phase 1 Placeholder)**
+### Template Discovery Test (for nonexistent templates)
 ```bash
-./run-prompt.sh ask
-./run-prompt.sh analyze-codebase  
-./run-prompt.sh code-review
-./run-prompt.sh feature-planning
-# Expected: Shows Phase 1 placeholder message for each task
+./run-prompt.sh ask --template=nonexistent --model=gemini/gemini-2.0-flash --name="Test User"
+# Should show error: Template not found
 ```
 
-**Test 4: Global Command (if installed)**
+### Special Characters Testing ✅ VERIFIED WORKING
+
+Test the documented special character handling:
+
 ```bash
-run-prompt.sh --list-tasks
-run-prompt.sh ask
-# Expected: Same behavior as local script
+# Test 1: Mixed special characters with dollar signs
+./run-prompt.sh ask --template=hi --model=gemini/gemini-2.0-flash \
+  --string1='"$0 bill"' \
+  --string2="'\$10 bill'" \
+  --string3='`$75 bill`'
+
+# Test 2: Simple quote escaping
+./run-prompt.sh ask --template=hi --model=gemini/gemini-2.0-flash \
+  --string1='"hey"' \
+  --string2="'hey'" \
+  --string3="\`hey\`" \
+  --string4='`hey`'
+
+# Test 3: Complex nested quotes
+./run-prompt.sh ask --template=hi --model=gemini/gemini-2.0-flash \
+  --string1='"Complex \"nested\" quotes"' \
+  --string2="'Don'\''t break this'" \
+  --string3="\`echo 'hello'\`"
+
+# Test 4: Variable expansion vs literal
+./run-prompt.sh ask --template=hi --model=gemini/gemini-2.0-flash \
+  --string1='"User: $USER"' \
+  --string2="'Literal: \$USER'" \
+  --string3='`pwd`'
 ```
 
-### Configuration Tests
+## Phase 1 (Current): ✅ Foundation Complete
 
-**Test 5: Custom Runtime Environment**
+**Completed Features:**
+- ✅ **Core CLI**: `run-prompt.sh ask --template=<name> --model=<provider/model>`
+- ✅ **Dry Run Default**: Shows execution plan without contacting AI
+- ✅ **`--go` Flag**: Explicit execution mode
+- ✅ **Template System**: Placeholder replacement with `{{PARAM_NAME}}`
+- ✅ **File Injection**: `--param=file:path/to/file.txt` syntax
+- ✅ **Special Character Handling**: Proven shell escaping for all edge cases
+- ✅ **Multiple Templates**: Template discovery in `assets/.vibe-tools-square/config/templates/`
+- ✅ **Template Content Preview**: Shows processed content in dry run
+- ✅ **Proper Output Handling**: Default timestamped files in `~/.vibe-tools-square/output/`
+- ✅ **Provider/Model Parsing**: Automatic extraction from `provider/model` format
+- ✅ **Comprehensive Logging**: Complete execution details logged for both dry run and live execution
+- ✅ **Cost Control**: `--max-tokens` parameter support
+
+**Templates Available:**
+- `hello`: Basic parameter demonstration template
+- `hi`: Special characters testing template
+
+## Phase 2: Isolated Context Environment (ICE) - PLANNED
+
+Phase 2 will add context curation for `repo` and `plan` commands.
+
+### Expected Phase 2 Tests (Not Yet Implemented)
 ```bash
-VIBE_TOOLS_SQUARE_HOME=~/custom-vibe-tools ./run-prompt.sh --list-tasks
-# Expected: Lists tasks from custom location
+# Repo command with context curation
+./run-prompt.sh repo --template=code-review --model=gemini/gemini-2.0-flash --context-filter="*.js,*.ts" --go
+
+# Plan command with curated context
+./run-prompt.sh plan --template=feature-plan --model=gemini/gemini-2.0-flash --include-dirs="src/,docs/" --go
+
+# Context preview (dry run)
+./run-prompt.sh repo --template=analyze --model=gemini/gemini-2.0-flash --show-context-only
 ```
 
-**Test 6: Configuration File Validation**
+## Testing Strategy
+
+### 1. Feature Testing
+- Test each parameter type individually
+- Test combinations of parameters
+- Test edge cases (empty values, special characters)
+- Test error conditions (missing templates, invalid models)
+
+### 2. Special Characters Testing
+- Follow examples in `docs/special-characters-guide.md`
+- Test all combinations of quotes, backticks, dollar signs
+- Verify both shell processing and template replacement
+
+### 3. Integration Testing
+- Test with different AI providers (gemini, openai, anthropic)
+- Test with different models
+- Test actual AI responses end-to-end
+- Verify output file creation and logging
+
+### 4. Performance Testing
+- Test with large templates
+- Test with large file injections
+- Test with high token limits
+- Monitor execution times and log file sizes
+
+## Common Test Patterns
+
+### Dry Run First, Then Execute
 ```bash
-cat ~/.vibe-tools-square/config/default.conf
-cat ~/.vibe-tools-square/config/providers.conf.example
-# Expected: default.conf and providers.conf.example exist
+# 1. Test dry run first
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test"
 
-# User should create their own providers.conf:
-cp ~/.vibe-tools-square/config/providers.conf.example ~/.vibe-tools-square/config/providers.conf
-# Then customize providers.conf with their API keys and preferred models
-
-# This should NOT exist:
-ls ~/.vibe-tools-square/config/vibe-tools.config.json 2>/dev/null || echo "✅ vibe-tools.config.json correctly absent"
+# 2. If dry run looks good, execute
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test" --go
 ```
 
-### Logging Tests
-
-**Test 7: Log File Creation**
+### Check Logs for Debugging
 ```bash
-./run-prompt.sh ask
-cat ~/.vibe-tools-square/logs/run-prompt.log
-# Expected: Log file created with timestamped entries
+# View latest execution log
+ls -la ~/.vibe-tools-square/output/*.log | tail -1
+cat $(ls -la ~/.vibe-tools-square/output/*.log | tail -1 | awk '{print $NF}')
 ```
 
-**Test 8: Multiple Runtime Environments**
+### Test Parameter Parsing
 ```bash
-# Install to custom location
-./scripts/install.sh --target=/tmp/test-vibe-tools
-
-# Test with custom environment
-VIBE_TOOLS_SQUARE_HOME=/tmp/test-vibe-tools ./run-prompt.sh --list-tasks
-
-# Test with default environment  
-./run-prompt.sh --list-tasks
-
-# Expected: Each shows tasks from respective locations
+# Look for "Parameters: X custom parameters" in output
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --test1=value1 --test2=value2 | grep "Parameters:"
 ```
 
-## Architecture Validation
+## Error Testing
 
-**Test 9: Module Sourcing**
+### Invalid Templates
 ```bash
-./run-prompt.sh ask 2>&1 | head -5
-# Expected: No "file not found" errors, clean execution
+./run-prompt.sh ask --template=invalid --model=gemini/gemini-2.0-flash
+# Should show: Template not found error
 ```
 
-**Test 10: Global Command Verification**
+### Invalid Models
 ```bash
-which run-prompt.sh
-ls -la $(which run-prompt.sh)
-# Expected: For default install: shows symlink to project script
-# Expected: For custom install: shows regular file (wrapper script)
-
-# If wrapper script:
-file $(which run-prompt.sh)
-head -5 $(which run-prompt.sh)
-# Expected: Shows bash script with VIBE_TOOLS_SQUARE_HOME export
+./run-prompt.sh ask --template=hello --model=invalid/model --go
+# Should show: Model not found error from vibe-tools
 ```
 
-## Error Handling Tests
-
-**Test 11: Missing Runtime Environment**
+### Missing Required Parameters
 ```bash
-VIBE_TOOLS_SQUARE_HOME=/nonexistent ./run-prompt.sh --list-tasks
-# Expected: Warning about missing tasks directory
+./run-prompt.sh ask --model=gemini/gemini-2.0-flash
+# Should show: Template is required error
 ```
 
-**Test 12: Invalid Task Name**
-```bash
-./run-prompt.sh nonexistent-task
-# Expected: Phase 1 placeholder message (no special error handling yet)
-```
+## Verification Checklist
 
-## Development Validation
-
-**Test 13: File Organization Check**
-```bash
-ls -la src/
-# Expected: config.sh, core.sh, template.sh, context.sh, providers.sh, logging_utils.sh, messaging_utils.sh
-
-ls -la assets/.vibe-tools-square/
-# Expected: tasks/, plus all README files
-```
-
-**Test 14: Task File Validation**
-```bash
-cat assets/.vibe-tools-square/tasks/ask.conf
-# Expected: TASK_NAME and TASK_DESCRIPTION only (no presumptuous scaffolding)
-```
-
----
-
-## Expected Behaviors by Phase
-
-### Phase 1 (Current): ✅ Foundation Complete
-- ✅ Task listing works dynamically
-- ✅ Basic task execution (placeholder)
-- ✅ Multiple runtime environments supported
-- ✅ Global command installation
-- ✅ Proper logging using messaging utilities
-- ✅ Configuration file management
-
-### Phase 2 (Next): Context Curation Engine
-- Template processing
-- ICE (Isolated Context Environment) 
-- Include/exclude patterns
-- Dry run functionality
-
-### Phase 3 (Future): Full Integration
-- Actual vibe-tools command execution
-- Multi-step workflows
-- Advanced template features
+For each test, verify:
+- [ ] Dry run shows complete execution plan
+- [ ] Parameters are parsed correctly
+- [ ] Template content is processed properly
+- [ ] Special characters are handled safely
+- [ ] Output file paths are correct
+- [ ] Execution logs contain all details
+- [ ] AI responses are saved (for `--go` tests)
+- [ ] No shell injection vulnerabilities

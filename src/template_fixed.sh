@@ -25,8 +25,8 @@ find_template() {
     local search_paths=(
         "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name"
         "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name/template.txt"
-        "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name"
-        "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
+        "$(pwd)/config/templates/$template_name"
+        "$(pwd)/config/templates/$template_name/template.txt"
     )
     
     for path in "${search_paths[@]}"; do
@@ -69,7 +69,7 @@ process_placeholders() {
             # Convert \n to actual newlines in the value BEFORE any other processing
             value=$(printf '%b' "$value")
             
-            # Convert key to uppercase for placeholder (this is the correct behavior)
+            # Convert key to uppercase for placeholder
             local placeholder_key=$(echo "$key" | tr '[:lower:]' '[:upper:]')
             
             # Check if value starts with 'file:' prefix - if so, read the file content
