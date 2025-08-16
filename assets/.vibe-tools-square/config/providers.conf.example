@@ -24,6 +24,8 @@ MODEL_ANTHROPIC_CLAUDE_3_5_SONNET="claude-3-5-sonnet-20241022"
 PROVIDER_GEMINI="gemini"
 ## Models
 MODEL_GEMINI_GEMINI_2_0_FLASH="gemini-2.0-flash"
+MODEL_GEMINI_GEMINI_2_5_FLASH="gemini-2.5-flash"
+MODEL_GEMINI_GEMINI_2_5_PRO="gemini-2.5-pro"
 
 # OpenAI
 # ---------
@@ -38,13 +40,15 @@ MODEL_OPENAI_O3_MINI="o3-mini"
 PROVIDER_OPENROUTER="openrouter"
 ## Models
 MODEL_OPENROUTER_GEMINI_2_0_FLASH="google/gemini-2.0-flash-001"
+MODEL_OPENROUTER_GEMINI_2_5_FLASH="google/gemini-2.5-flash"
+MODEL_OPENROUTER_GEMINI_2_5_PRO="google/gemini-2.5-pro"
 
 # Perplexity
 # ---------
 ## Provider
 PROVIDER_PERPLEXITY="perplexity"
 ## Models
-MODEL_PERPLEXITY_SONAR=""
+MODEL_PERPLEXITY_SONAR="sonar-pro"
 
 # Usage Examples:
 # Monomodel:

@@ -8,22 +8,39 @@ set -o pipefail
 #   ██  Vibe-Tools Square: AI Query Template Engine
 #  █  █  Version: 1.0.0
 #    █   Author: Benjamin Pequet
-#   ███    GitHub: https://github.com/pequet/vibe-tools-square/
+#   █    GitHub: https://github.com/pequet/vibe-tools-square/
 #
 # Purpose:
-#   Installs the Vibe-Tools Square utility, including the main script,
-#   runtime environment, configuration files, and optional global availability.
+#   Installs the Vibe-Tools Square utility by performing these steps:
+#   1. Creates runtime directory structure at target location
+#   2. Copies configuration files, templates, and task definitions
+#   3. Installs documentation (README files for each directory)
+#   4. Optionally creates global command in /usr/local/bin (user prompted)
+#
+# Installation Steps Explained:
+#   • Runtime Environment: Creates ~/.vibe-tools-square/ (or custom path) with subdirectories
+#   • Configuration: Copies default.conf, providers.conf.example, and templates
+#   • Task Definitions: Copies predefined task configurations
+#   • Documentation: Installs README files explaining each directory
+#   • Global Access: Prompts user to create global 'run-prompt.sh' command
+#
+# Update Mode (--update):
+#   • Updates existing installation without touching global command
+#   • Refreshes configuration files, templates, and task definitions
+#   • Preserves user's custom configurations where safe
 #
 # Usage:
-#   ./scripts/install.sh [--target=PATH]
+#   ./scripts/install.sh [OPTIONS]
 #   
 # Options:
 #   --target=PATH   Install to specified path (default: ~/.vibe-tools-square)
+#   --update        Update existing installation (no global command changes)
 #   -h, --help      Show this help message and exit
 #
 # Dependencies:
-#   - rsync (for file copying and context curation)
 #   - bash 4.0+ (for associative arrays and modern features)
+#   - cp command (for file copying)
+#   - sudo (only if installing global command)
 #
 # Changelog:
 #   1.0.0 - 2025-08-14 - Initial release with modular architecture
@@ -36,11 +53,13 @@ set -o pipefail
 INSTALL_SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_ROOT="$(dirname "$INSTALL_SCRIPT_DIR")"
 RUNTIME_HOME="$HOME/.vibe-tools-square"
+UPDATE_MODE=false
 
 # --- Source Utilities ---
 # Source the proper utility libraries from src/utils/
 source "${PROJECT_ROOT}/src/utils/logging_utils.sh"
-source "${PROJECT_ROOT}/src/utils/messaging_utils.sh"
+source "${PROJECT_ROOT}/src/utils/messaging_utils.sh"   
+source "${PROJECT_ROOT}/src/utils/input_utils.sh"
 
 # Set up logging for the installer
 LOG_FILE_PATH="${INSTALL_SCRIPT_DIR}/../logs/install.log"
@@ -55,8 +74,8 @@ verify_dependencies() {
     
     local missing_deps=()
     
-    if ! command -v rsync >/dev/null 2>&1; then
-        missing_deps+=("rsync")
+    if ! command -v cp >/dev/null 2>&1; then
+        missing_deps+=("cp")
     fi
     
     if ! command -v bash >/dev/null 2>&1; then
@@ -83,6 +102,7 @@ verify_source_files() {
         "$PROJECT_ROOT/src/context.sh"
         "$PROJECT_ROOT/src/providers.sh"
         "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf"
+        "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json"
     )
     
     for file in "${required_files[@]}"; do
@@ -96,7 +116,25 @@ verify_source_files() {
 }
 
 create_runtime_environment() {
-    print_step "Creating runtime environment at $RUNTIME_HOME"
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_step "Verifying runtime environment at $RUNTIME_HOME"
+        
+        # In update mode, check if the target exists
+        if [[ ! -d "$RUNTIME_HOME" ]]; then
+            print_info "Target directory does not exist: $RUNTIME_HOME"
+            response=$(get_input "Would you like to create it? (y/N)")
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                print_step "Creating new runtime environment at $RUNTIME_HOME"
+            else
+                print_error "Cannot update non-existent installation"
+                exit 1
+            fi
+        else
+            print_step "Updating runtime environment at $RUNTIME_HOME"
+        fi
+    else
+        print_step "Creating runtime environment at $RUNTIME_HOME"
+    fi
     
     # Create directory structure
     mkdir -p "$RUNTIME_HOME"/{config,content,output,logs}
@@ -114,7 +152,46 @@ create_runtime_environment() {
         exit 1
     fi
     
-    print_success "Runtime environment created"
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_success "Runtime environment updated"
+    else
+        print_success "Runtime environment created"
+    fi
+}
+
+setup_content_directory() {
+    print_step "Setting up Isolated Context Environment (ICE)..."
+    
+    # Create the public subdirectory in content
+    mkdir -p "$RUNTIME_HOME/content/public"
+    
+    # Copy vibe-tools.config.json to content directory
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json" "$RUNTIME_HOME/content/"
+    else
+        print_error "vibe-tools.config.json not found in assets"
+        exit 1
+    fi
+    
+    # Install vibe-tools in the content directory
+    print_step "Installing vibe-tools in content directory..."
+    if command -v vibe-tools >/dev/null 2>&1; then
+        cd "$RUNTIME_HOME/content"
+        if ! vibe-tools install . >/dev/null 2>&1; then
+            print_error "Failed to install vibe-tools in content directory"
+            print_error "Make sure vibe-tools is installed globally and working"
+            cd - >/dev/null
+            exit 1
+        fi
+        cd - >/dev/null
+        print_success "vibe-tools installed in content directory"
+    else
+        print_error "vibe-tools command not found"
+        print_error "Please install vibe-tools globally first: npm install -g vibe-tools"
+        exit 1
+    fi
+    
+    print_success "Isolated Context Environment setup complete"
 }
 
 install_configuration() {
@@ -148,6 +225,26 @@ install_configuration() {
     fi
     
     print_success "Configuration files installed"
+}
+
+prompt_global_installation() {
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_info "Skipping global command setup (update mode)"
+        return 0
+    fi
+    
+    print_info ""
+    print_info "Installation complete! The run-prompt.sh script is available locally at:"
+    print_info "  $PROJECT_ROOT/run-prompt.sh"
+    print_info ""
+    response=$(get_input "Would you like to make 'run-prompt.sh' available globally? (y/N)")
+    
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        install_global_script
+    else
+        print_info "Global installation skipped. You can install globally later by re-running this script."
+        print_info "For now, use: $PROJECT_ROOT/run-prompt.sh <task-name> --template=..."
+    fi
 }
 
 install_global_script() {
@@ -224,6 +321,10 @@ parse_arguments() {
                 RUNTIME_HOME="${RUNTIME_HOME/#\~/$HOME}"
                 shift
                 ;;
+            --update)
+                UPDATE_MODE=true
+                shift
+                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -238,20 +339,25 @@ parse_arguments() {
 }
 
 show_help() {
-    echo "Vibe-Tools Square Installer"
-    echo ""
-    echo "Usage: $0 [--target=PATH]"
-    echo ""
-    echo "Options:"
-    echo "  --target=PATH   Install to specified path (default: ~/.vibe-tools-square)"
-    echo "  -h, --help      Show this help message and exit"
-    echo ""
-    echo "Examples:"
-    echo "  $0                                          # Install to ~/.vibe-tools-square"
-    echo "  $0 --target=~/Google\ Drive/vibe-tools     # Install to Google Drive"
-    echo "  $0 --target=/custom/path                    # Install to custom location"
-    echo ""
-    echo "Note: Creates global 'run-prompt' command (may require sudo password)"
+    print_info "Vibe-Tools Square Installer"
+    print_info ""
+    print_info "Usage: $0 [OPTIONS]"
+    print_info ""
+    print_info "Options:"
+    print_info "  --target=PATH   Install to specified path (default: ~/.vibe-tools-square)"
+    print_info "  --update        Update existing installation (no global command changes)"
+    print_info "  -h, --help      Show this help message and exit"
+    print_info ""
+    print_info "Examples:"
+    print_info "  $0                                          # Fresh install to ~/.vibe-tools-square"
+    print_info "  $0 --target=~/Google\ Drive/vibe-tools     # Install to Google Drive"
+    print_info "  $0 --target=/custom/path                    # Install to custom location"
+    print_info "  $0 --update                                 # Update default installation"
+    print_info "  $0 --update --target=/custom/path          # Update custom installation"
+    print_info ""
+    print_info "Installation vs Update:"
+    print_info "  • Install: Full setup + prompts for global command"
+    print_info "  • Update:  Refresh files only, skip global command setup"
 }
 
 # *
@@ -261,7 +367,11 @@ show_help() {
 main() {
     parse_arguments "$@"
     
-    print_header "Installation Starting"
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_header "Update Starting"
+    else
+        print_header "Installation Starting"
+    fi
     
     # Step 1: Verify dependencies
     verify_dependencies
@@ -269,23 +379,39 @@ main() {
     # Step 2: Verify source files
     verify_source_files
     
-    # Step 3: Create runtime environment
+    # Step 3: Create/update runtime environment
     create_runtime_environment
     
-    # Step 4: Install configuration
+    # Step 4: Setup content directory (ICE)
+    setup_content_directory
+    
+    # Step 5: Install/update configuration
     install_configuration
     
-    # Step 5: Install global script
-    install_global_script
+    # Step 6: Handle global script (install mode only, with prompt)
+    prompt_global_installation
     
-    print_success "Installation completed successfully!"
-    print_info ""
-    print_info "Next steps:"
-    print_info "1. Review configuration in: $RUNTIME_HOME/config/"
-    print_info "2. Test the installation with: $PROJECT_ROOT/run-prompt.sh <task-name> --template=test"
-    print_info "3. Or use globally: run-prompt.sh <task-name> --template=test"
-    print_info ""
-    print_info "For testing commands, see: docs/testing-commands.md"
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_success "Update completed successfully!"
+        print_info ""
+        print_info "Updated:"
+        print_info "• Configuration files in: $RUNTIME_HOME/config/"
+        print_info "• Task definitions and templates"
+        print_info "• Documentation files"
+        print_info ""
+        print_info "Note: Global command setup was not changed (update mode)"
+    else
+        print_success "Installation completed successfully!"
+        print_info ""
+        print_info "Next steps:"
+        print_info "1. Review configuration in: $RUNTIME_HOME/config/"
+        print_info "2. Test the installation with: $PROJECT_ROOT/run-prompt.sh <task-name> --template=test"
+        if command -v run-prompt.sh >/dev/null 2>&1; then
+            print_info "3. Or use globally: run-prompt.sh <task-name> --template=test"
+        fi
+        print_info ""
+        print_info "For testing commands, see: docs/testing-commands.md"
+    fi
 }
 
 # --- Script Entrypoint ---

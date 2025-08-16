@@ -1,35 +1,21 @@
-# Isolated Context Environment (ICE)
+# Content Directory - Isolated Context Environment (ICE)
 
-This directory serves as the **Isolated Context Environment** for `repo` and `plan` commands.
+This directory serves as the Isolated Context Environment for `repo` and `plan` commands.
 
 ## Purpose
 
-When you run `run-prompt repo` or `run-prompt plan`, this directory is dynamically populated with a curated subset of your codebase before the AI query is executed.
+When running `repo` or `plan` commands, the system:
+1. Copies specified files here using `--include` and `--exclude` patterns
+2. Installs vibe-tools in this directory
+3. Runs the vibe-tools command from within this curated context
+4. Maintains its own `vibe-tools.config.json` configuration
 
-## How It Works
+## Subdirectories
 
-1. **Before execution**: The `context.sh` script copies only the files you specify using `--include` and `--exclude` patterns
-2. **During execution**: `vibe-tools` runs from this directory, seeing only the curated context
-3. **After execution**: The directory can be inspected or cleaned for the next run
-
-## Benefits
-
-- **Cost Control**: Only relevant files are sent to the AI, reducing token usage
-- **Precision**: Eliminate noise from irrelevant code
-- **Safety**: Your main codebase is never modified
-- **Debugging**: You can inspect exactly what context was provided
+- `public/` - Public content area for curated files
+- `node_modules/` - Local vibe-tools installation
+- `vibe-tools.config.json` - Vibe-tools configuration for this context
 
 ## Usage
 
-```bash
-# Example: Include specific directories, exclude logs
-run-prompt repo --template=analysis \
-  --include="src/***" \
-  --include="docs/important.md" \
-  --exclude="*.log" \
-  --exclude="node_modules/**"
-```
-
-## Note
-
-This directory is temporary and gets recreated for each context-dependent command. Do not store permanent files here.
+This directory is automatically managed by the run-prompt.sh script. You typically don't need to interact with it directly, but you can inspect its contents for debugging context curation.

@@ -31,6 +31,12 @@ init_logging() {
     setup_vibe_tools_logging
 }
 
+# Initialize configuration and providers
+init_system() {
+    init_config
+    init_providers
+}
+
 # Main entry point
 main() {
     # Preserve original environment variable before any processing
@@ -38,7 +44,7 @@ main() {
 
     # Initialize configuration and logging early so that
     # VIBE_TOOLS_SQUARE_HOME is available even when showing usage
-    init_config
+    init_system
     init_logging
     check_dependencies
 

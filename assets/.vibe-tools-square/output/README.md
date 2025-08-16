@@ -1,28 +1,22 @@
-# Default Output Directory
+# Output Directory
 
-This directory contains output from `vibe-tools-square` commands when no specific output file is specified.
+Default location for command outputs when no specific output file is specified.
 
-## File Naming Convention
+## Structure
 
-Output files are automatically timestamped:
-- `YYYY-MM-DD_HHMM-command-template.md`
-
-## Examples
-
+Outputs are organized by date:
 ```
-2025-08-14_1430-repo-analysis.md
-2025-08-14_1445-ask-metacognitive.md
-2025-08-14_1500-plan-feature-implementation.md
+output/
+├── 2025-01-15/
+│   ├── 2025-01-15_1430-template-name-result.md
+│   └── 2025-01-15_1445-another-result.md
+└── 2025-01-16/
+    └── 2025-01-16_0900-morning-result.md
 ```
 
-## Organization
+## File Naming
 
-Files are organized by date for easy browsing. Older files can be safely archived or deleted as needed.
+Files are automatically timestamped using the format:
+`YYYY-MM-DD_HHMM-description.md`
 
-## Custom Output
-
-To save to a specific location instead of this directory, use the `--output-file` flag:
-
-```bash
-run-prompt ask --template=analysis --output-file=/path/to/specific/file.md
-```
+The description is derived from the template name and command context.

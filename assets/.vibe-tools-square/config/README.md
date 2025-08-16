@@ -1,31 +1,24 @@
 # Configuration Directory
 
-This directory contains runtime configuration for `vibe-tools-square`.
+This directory contains configuration files and templates for Vibe-Tools Square.
 
 ## Files
 
-- `default.conf` - Environment variables and default settings
-- `providers.conf` - AI provider presets with aliases
-- `vibe-tools.config.json` - Vibe-tools specific configuration
-- `templates/` - Template collection (copied from development repo)
+- `default.conf` - Default environment variables and settings
+- `providers.conf.example` - Example provider configurations (copy to `providers.conf` to use)
+- `templates/` - Template collection for various use cases
 
 ## Configuration Hierarchy
 
-1. Environment variables in `default.conf`
-2. Provider presets from `providers.conf`
-3. Command-line flags (override everything)
-4. Vibe-tools configuration from `vibe-tools.config.json`
+1. Command-line arguments (highest priority)
+2. Environment variables
+3. `providers.conf` (if exists)
+4. `default.conf` (fallback)
 
-## Provider Presets
+## Templates
 
-Use aliases to define provider+model combinations:
-
-```bash
-# Example usage with preset aliases
-run-prompt ask --template=analysis --preset=gemini-free
-run-prompt repo --template=review --preset=openrouter-cheap
-```
-
-## Template Management
-
-Templates are automatically synced from the development repository during installation. To add custom templates, place them in `templates/` - they will be preserved during updates.
+Templates support placeholder replacement with `{{TOKEN}}` syntax:
+- `{{TODAY_DATE}}` - Current date
+- `{{TODAY_DATETIME}}` - Current date and time  
+- `{{PARAM_NAME}}` - Custom parameters from command line
+- `file:path/to/file.txt` - File content injection

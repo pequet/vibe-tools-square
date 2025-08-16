@@ -1,0 +1,28 @@
+{
+  "web": {
+    "provider": "perplexity",
+    "model": "sonar-pro"
+  },
+  "plan": {
+    "fileProvider": "openrouter",
+    "fileModel": "google/gemini-2.5-flash",
+    "thinkingProvider": "openrouter",
+    "thinkingModel": "google/gemini-2.5-flash"
+  },
+  "repo": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash"
+  },
+  "doc": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash"
+  },
+  "stagehand": {
+    "provider": "anthropic"
+  },
+  "mcp": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "ide": "cursor"
+}

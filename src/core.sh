@@ -128,16 +128,25 @@ execute_ask_task() {
     
     print_step "Processing placeholders"
     local processed_content
-    processed_content=$(process_placeholders "$template_content" "${params[@]}")
+    processed_content=$(process_placeholders "$template_content" "${params[@]+"${params[@]}"}")
     
     # Build vibe-tools command
     local vibe_cmd="vibe-tools ask"
     local vibe_args=()
     
-    # Parse provider from model if not explicitly set
-    if [[ -z "$provider" ]] && [[ "$model" == */* ]]; then
-        provider="${model%%/*}"
-        model="${model#*/}"
+    # Resolve provider/model using providers.conf mapping
+    if [[ "$model" == */* ]]; then
+        # Use the provider mapping system
+        local resolved
+        if ! resolved=$(resolve_provider_model "$model"); then
+            print_error "Provider/model mapping failed for: $model"
+            exit 1
+        fi
+        provider="${resolved%%|*}"
+        model="${resolved#*|}"
+    elif [[ -z "$provider" ]]; then
+        # No provider specified, use model as-is
+        model="$model"
     fi
     
     # Add model and provider
@@ -172,40 +181,40 @@ execute_ask_task() {
     
     # Log all execution details
     {
-        echo "=== VIBE-TOOLS SQUARE EXECUTION LOG ==="
-        echo "Timestamp: $(date)"
-        echo "Mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
-        echo ""
-        echo "=== EXECUTION PLAN DETAILS ==="
-        echo "Template: $template_name"
-        echo "Template source: $template_path"
-        echo "Model: $model"
-        [[ -n "$provider" ]] && echo "Provider: $provider" || echo "Provider: (using vibe-tools default)"
-        [[ -n "$max_tokens" ]] && echo "Max tokens: $max_tokens" || echo "Max tokens: (using vibe-tools default)"
-        echo "Working directory: $(pwd)"
-        echo "Output destination: $output_file"
-        echo "Parameters: ${#params[@]} custom parameters"
+        print_info "=== VIBE-TOOLS SQUARE EXECUTION LOG ==="
+        print_info "Timestamp: $(date)"
+        print_info "Mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
+        print_info ""
+        print_info "=== EXECUTION PLAN DETAILS ==="
+        print_info "Template: $template_name"
+        print_info "Template source: $template_path"
+        print_info "Model: $model"
+        [[ -n "$provider" ]] && print_info "Provider: $provider" || print_info "Provider: (using vibe-tools default)"
+        [[ -n "$max_tokens" ]] && print_info "Max tokens: $max_tokens" || print_info "Max tokens: (using vibe-tools default)"
+        print_info "Working directory: $(pwd)"
+        print_info "Output destination: $output_file"
+        print_info "Parameters: ${#params[@]} custom parameters"
         if [[ ${#params[@]} -gt 0 ]]; then
-            echo "Parameter details:"
+            print_info "Parameter details:"
             for param in "${params[@]}"; do
                 if [[ "$param" == --*=file:* ]]; then
                     local param_name="${param%%=*}"
                     local file_path="${param#*=file:}"
-                    echo "  $param_name: FILE INJECTION from '$file_path' (resolved from current directory: $(pwd))"
+                    print_info "  $param_name: FILE INJECTION from '$file_path' (resolved from current directory: $(pwd))"
                 else
-                    echo "  $param"
+                    print_info "  $param"
                 fi
             done
         fi
-        echo ""
-        echo "=== VIBE-TOOLS COMMAND ==="
+        print_info ""
+        print_info "=== VIBE-TOOLS COMMAND ==="
         # Show the properly escaped command that will actually be executed using legacy technique
         local safe_content_for_log=${processed_content//\'/\'\\\'\'}
-        echo "$vibe_cmd '$safe_content_for_log' ${vibe_args[*]}"
-        echo ""
-        echo "=== PROCESSED TEMPLATE CONTENT ==="
-        echo "$processed_content"
-        echo ""
+        print_info "$vibe_cmd '$safe_content_for_log' ${vibe_args[*]}"
+        print_info ""
+        print_info "=== PROCESSED TEMPLATE CONTENT ==="
+        print_info "$processed_content"
+        print_info ""
     } > "$log_file"
     
     # Show execution plan for both dry run and live execution

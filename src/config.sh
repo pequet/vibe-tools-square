@@ -39,9 +39,7 @@ detect_runtime_home() {
     if [[ -n "${VIBE_TOOLS_SQUARE_HOME:-}" ]]; then
         return 0
     fi
-    
-    # No additional detection needed - wrapper script handles this
-    
+        
     # Default fallback
     VIBE_TOOLS_SQUARE_HOME="${HOME}/.vibe-tools-square"
 }
