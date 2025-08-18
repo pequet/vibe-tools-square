@@ -195,9 +195,9 @@ setup_content_directory() {
 }
 
 install_configuration() {
-    print_step "Installing configuration files..."
+    print_step "Setting up configuration structure..."
     
-    # Copy configuration files from assets (where they belong!)
+    # Copy essential configuration files from assets
     if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf" "$RUNTIME_HOME/config/"; then
         print_error "Failed to copy default.conf"
         exit 1
@@ -209,22 +209,28 @@ install_configuration() {
         exit 1
     fi
     
-    # Copy task definitions
-    if [[ -d "$PROJECT_ROOT/assets/.vibe-tools-square/tasks" ]]; then
-        cp -r "$PROJECT_ROOT/assets/.vibe-tools-square/tasks" "$RUNTIME_HOME/"
+    # Create task directory structure with README only (dynamic discovery handles assets)
+    print_step "Creating task directory structure..."
+    mkdir -p "$RUNTIME_HOME/tasks"
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/tasks/README.md" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/tasks/README.md" "$RUNTIME_HOME/tasks/"
+        print_info "Tasks will be discovered dynamically from assets (runtime precedence)"
     else
-        print_error "Task definitions not found in assets"
+        print_error "Task README not found in assets"
         exit 1
     fi
     
-    # Copy templates from assets
-    if [[ -d "$PROJECT_ROOT/assets/.vibe-tools-square/config/templates" ]]; then
-        cp -r "$PROJECT_ROOT/assets/.vibe-tools-square/config/templates" "$RUNTIME_HOME/config/"
+    # Create templates directory structure with README only (dynamic discovery handles assets)
+    print_step "Creating templates directory structure..."
+    mkdir -p "$RUNTIME_HOME/config/templates"
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/config/templates/README.md" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/templates/README.md" "$RUNTIME_HOME/config/templates/"
+        print_info "Templates will be discovered dynamically from assets (runtime precedence)"
     else
-        mkdir -p "$RUNTIME_HOME/config/templates"
+        print_warning "Templates README not found in assets"
     fi
     
-    print_success "Configuration files installed"
+    print_success "Configuration structure setup complete"
 }
 
 prompt_global_installation() {

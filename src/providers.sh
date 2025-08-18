@@ -22,7 +22,12 @@ load_provider_presets() {
 # Convert kebab-case to SNAKE_CASE for variable lookup
 kebab_to_snake() {
     local input="$1"
-    echo "$input" | tr '[:lower:]' '[:upper:]' | sed 's/-/_/g'
+    # Normalize to SNAKE_CASE by converting lowercase to uppercase
+    # and replacing dashes and dots with underscores.
+    # Example: "gemini-2.0-flash" -> "GEMINI_2_0_FLASH"
+    echo "$input" \
+        | tr '[:lower:]' '[:upper:]' \
+        | sed -E 's/[-.]/_/g'
 }
 
 # Get provider configuration

@@ -13,7 +13,7 @@ assets/.vibe-tools-square/
 │   └── templates/                    # Template collection
 ```
 
-### Runtime Structure  
+### Runtime Environment Structure  
 ```
 ~/.vibe-tools-square/
 ├── config/                          # User's runtime configs (customizable)
@@ -21,7 +21,26 @@ assets/.vibe-tools-square/
 │   ├── providers.conf.example       # Copied from assets  
 │   ├── providers.conf               # USER CREATES with their preferences
 │   └── templates/                   # Copied from assets
+├── tasks/                           # User's custom task configs (optional)
+│   ├── ask.conf                     # Overrides repo version if present
+│   ├── repo.conf                    # Overrides repo version if present
+│   └── my-custom-task.conf          # User-defined tasks (must use existing TASK_TYPE: ask, repo, or plan)
+├── content/                         # ICE workspace
+├── output/                          # Generated outputs
+└── logs/                           # Execution logs
 ```
+
+### Task Configuration Discovery
+The system uses a **runtime-first, repo-fallback** discovery pattern:
+
+1. **Runtime First**: Checks `~/.vibe-tools-square/tasks/${task_name}.conf`
+2. **Repo Fallback**: If not found, uses `assets/.vibe-tools-square/tasks/${task_name}.conf`
+3. **Dynamic Loading**: Task behavior is determined by `TASK_TYPE` field in .conf files
+
+**Important**: 
+- If no runtime tasks directory exists, system automatically uses repo assets
+- Runtime configs take precedence and allow development without reinstalling
+- Task names are no longer hardcoded - system is fully dynamic
 
 **Important**: 
 - `default.conf` contains system defaults and gets copied during install
@@ -77,7 +96,21 @@ ls -la ~/.vibe-tools-square/tasks/
 **Test 2: List Available Tasks**
 ```bash
 ./run-prompt.sh --list-tasks
-# Expected: Shows dynamic list of tasks from runtime environment
+# Expected: Shows dynamic list of tasks from runtime environment first, then repo assets
+```
+
+**Test 2B: Task Configuration Discovery Priority**
+```bash
+# Verify system uses repo assets when no runtime tasks exist
+ls ~/.vibe-tools-square/tasks/ 2>/dev/null || echo "No runtime tasks - will use repo assets"
+./run-prompt.sh --list-tasks
+# Expected: Shows tasks from assets/.vibe-tools-square/tasks/ (ask, repo, plan, etc.)
+
+# Test runtime precedence (if runtime tasks existed)
+# mkdir -p ~/.vibe-tools-square/tasks/
+# cp assets/.vibe-tools-square/tasks/ask.conf ~/.vibe-tools-square/tasks/
+# ./run-prompt.sh ask --prompt="test" --model=gemini/gemini-2.0-flash
+# Expected: Would show "Using runtime task config: ~/.vibe-tools-square/tasks/ask.conf"
 ```
 
 **Test 3: Task Execution (Phase 1 Placeholder)**
@@ -94,6 +127,19 @@ ls -la ~/.vibe-tools-square/tasks/
 ```bash
 ./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --project="My Project" --description="Testing the system"
 # Expected: Shows processed template content and vibe-tools command without executing
+```
+
+**Test 3A-2: Ask with Universal --prompt Flag (Dry Run)**
+```bash
+./run-prompt.sh ask --prompt="What is this project about?" --model=gemini/gemini-2.0-flash
+# Expected: Shows direct prompt text and vibe-tools command without executing
+```
+
+**Test 3A-3: Ask with --prompt File Loading (Dry Run)**
+```bash
+echo "Analyze this codebase structure" > /tmp/test-prompt.txt
+./run-prompt.sh ask --prompt="file:/tmp/test-prompt.txt" --model=gemini/gemini-2.0-flash
+# Expected: Loads prompt from file and shows command without executing
 ```
 
 **Test 3B: Ask with File Content Injection (Dry Run)**
@@ -130,6 +176,135 @@ ls -la ~/.vibe-tools-square/tasks/
 ```bash
 ./run-prompt.sh ask --template=nonexistent --model=gemini/gemini-2.0-flash
 # Expected: Error message about template not found in search paths
+```
+
+### Phase 1 Repo Implementation Tests ✅ COMPLETED
+
+**Test 4A: Basic Repo with Context Validation**
+```bash
+./run-prompt.sh repo "Explain the overall structure of this codebase"
+# Expected: ERROR - Repository analysis requires context files. Use --include to specify files/folders to analyze.
+```
+
+**Test 4A-2: Repo with Universal --prompt Flag (Dry Run)**
+```bash
+./run-prompt.sh repo --prompt="Analyze the README file" --include=README.md
+# Expected: Uses direct prompt text with context validation, shows curated context, dry run mode
+```
+
+**Test 4B: Repo with Include Files (Dry Run)**
+```bash
+./run-prompt.sh repo "What is in the README and source code?" --include=README.md --include=src
+# Expected: Includes README.md file and everything in src/ folder, shows count of curated files
+```
+
+**Test 4C: Repo with Include and Exclude (Dry Run)**
+```bash
+./run-prompt.sh repo "Analyze the source code but ignore utility files" --include=src --exclude=src/utils
+# Expected: Includes src/ folder but excludes src/utils/ folder, shows file count
+```
+
+**Test 4D: Repo with Specific Model (Dry Run)**
+```bash
+./run-prompt.sh repo "Quick analysis" --include=README.md --model=openrouter/gemini-2.0-flash
+# Expected: Uses specified model instead of default, shows resolved provider/model in command
+```
+
+**Test 4E: Repo Live Execution**
+```bash
+./run-prompt.sh repo "Explain this project" --include=README.md --include=src --go
+# Expected: Actually runs vibe-tools repo command from ~/.vibe-tools-square/content with --subdir=public
+```
+
+**Test 4F: Show Current Context**
+```bash
+./run-prompt.sh repo --show-context
+# Expected: Lists all files currently in the curated context (ICE public folder)
+```
+
+### Phase 1 Plan Implementation Tests ✅ COMPLETED
+
+**Test 5A: Basic Plan with Context Validation**
+```bash
+./run-prompt.sh plan "Add user authentication to this project"
+# Expected: ERROR - Planning requires context files. Use --include to specify files/folders to base the plan on.
+```
+
+**Test 5A-2: Plan with Universal --prompt Flag (Dry Run)**
+```bash
+./run-prompt.sh plan --prompt="Create a plan to improve the documentation" --include=README.md --include=docs
+# Expected: Uses direct prompt text with context validation, shows curated context, dry run mode
+```
+
+**Test 5B: Plan with Context Files (Dry Run)**
+```bash
+./run-prompt.sh plan "Refactor the core module" --include=src/core.sh --include=README.md
+# Expected: Curates specified files, shows file count, displays plan command with --subdir=public
+```
+
+**Test 5C: Plan with Different Models (Dry Run)**
+```bash
+./run-prompt.sh plan "Design a new feature" --file-model=gemini/gemini-2.0-flash --thinking-model=openrouter/claude-3.5-sonnet --include=src
+# Expected: Shows command with separate fileProvider/fileModel and thinkingProvider/thinkingModel flags
+```
+
+**Test 5D: Plan with Full Context (Dry Run)**
+```bash
+./run-prompt.sh plan "Complete project analysis" --include=. --exclude=.git --exclude=node_modules
+# Expected: Includes current directory except specified exclusions, shows large file count
+```
+
+**Test 5E: Plan Live Execution**
+```bash
+./run-prompt.sh plan "Create implementation steps" --include=README.md --go
+# Expected: Actually executes vibe-tools plan command with curated context
+```
+
+**Test 5F: Show Context After Planning**
+```bash
+./run-prompt.sh plan "Test" --include=src --show-context
+# Expected: Shows all files that would be used as context for planning
+```
+
+### Context Management Tests ✅ COMPLETED
+
+**Test 6A: Context Patterns**
+```bash
+# Include single file
+./run-prompt.sh repo "Analyze README" --include=README.md
+
+# Include entire directory
+./run-prompt.sh repo "Analyze source" --include=src
+
+# Include multiple files and folders  
+./run-prompt.sh repo "Full analysis" --include=README.md --include=src --include=docs
+
+# Include with exclusions
+./run-prompt.sh repo "Source without tests" --include=src --exclude=src/test
+```
+
+**Test 6B: Check What's Actually Copied**
+```bash
+# Run with includes then check context
+./run-prompt.sh repo "Test" --include=README.md --include=src
+./run-prompt.sh repo --show-context
+
+# Expected: First command shows "Curated files copied: X", second shows detailed file list
+```
+
+**Test 6C: Simple Usage Examples**
+```bash
+# Include specific files:
+--include=README.md          # Include just the README.md file
+--include=src/core.sh        # Include just the src/core.sh file
+
+# Include entire folders:
+--include=src               # Include everything in src/ folder
+--include=docs              # Include everything in docs/ folder
+
+# Exclude from what you included:
+--exclude=src/test          # Exclude the src/test/ folder
+--exclude=README.md.bak     # Exclude specific backup file
 ```
 
 **Test 4: Global Command (if installed)**
@@ -251,6 +426,14 @@ cat assets/.vibe-tools-square/tasks/ask.conf
 - ✅ **Template placeholder replacement (string + file injection)**
 - ✅ **Dry-run default with --go flag for execution**
 - ✅ **Timestamped output to ~/.vibe-tools-square/output/**
+- ✅ **Repo task with ICE context curation**
+- ✅ **Plan task with separate file/thinking models**
+- ✅ **Include/exclude patterns for context filtering**
+- ✅ **--show-context flag to list curated files**
+- ✅ **Universal --prompt flag across all tasks (direct text + file: prefix)**
+- ✅ **Context validation (repo/plan require --include flags)**
+- ✅ **Runtime-first task configuration discovery with repo fallback**
+- ✅ **Dynamic task system (no hardcoded task names)**
 
 ### Phase 2 (Next): Context Curation Engine
 - Template processing
