@@ -35,7 +35,7 @@ Root/
 
 ### Locating This Repository
 
-This public repository (`vibe-tools-square/`) is a `Method` within the `Core` Project.
+This public repository (`vibe-tools-square/`) is a `Method` within the `Core` folder.
 
 ```text
 Core/
@@ -55,7 +55,7 @@ This path reveals a **Public-Private Pattern** at the `Vibe-Tools Square` level,
 
 ```text
 Vibe-Tools Square/                               # Grouping
-├── vibe-tools-square/                      # This Public Repo (contains symlinks to the private assets)
+├── vibe-tools-square/                           # This Public Repo (contains symlinks to the private assets)
 │   ├── .cursor -> ../private/.cursor/
 │   ├── .specstory -> ../private/.specstory/
 │   ├── inbox -> ../private/inbox/
