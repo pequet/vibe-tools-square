@@ -29,6 +29,7 @@ fi
 # Set LOGGING_ENABLED=0 to disable all logging
 # Set LOG_FILE_PATH to change where logs go (e.g., RAM disk, /dev/null, etc.)
 LOGGING_ENABLED=${LOGGING_ENABLED:-1}  # Default: enabled
+DEBUG_LOGGING=${DEBUG_LOGGING:-0}  # Default: disabled - set to 1 to enable debug logging
 
 # --- Function Definitions ---
 
@@ -38,6 +39,10 @@ LOGGING_ENABLED=${LOGGING_ENABLED:-1}  # Default: enabled
 # Handles all file-based logging operations.
 # Expects the calling script to define:
 #   - LOG_FILE_PATH: The full path to the log file.
+#   - DEBUG_LOGGING: Set to 1 to enable debug logging (default: 0)
+
+# Initialize a safe default value for LOG_FILE_PATH if not set
+LOG_FILE_PATH=${LOG_FILE_PATH:-"/tmp/vibe-tools-square.log"}
 # Optional:
 #   - LOGGING_ENABLED: Set to 0 to disable logging, 1 to enable (default: 1)
 

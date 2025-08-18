@@ -37,14 +37,35 @@ init_system() {
     init_providers
 }
 
+# Make sure the required directories exist
+ensure_directories_exist() {
+    local dirs=(
+        "$VIBE_TOOLS_SQUARE_HOME"
+        "$VIBE_TOOLS_SQUARE_HOME/config"
+        "$VIBE_TOOLS_SQUARE_HOME/content"
+        "$VIBE_TOOLS_SQUARE_HOME/output"
+        "$VIBE_TOOLS_SQUARE_HOME/logs"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            mkdir -p "$dir"
+        fi
+    done
+}
+
 # Main entry point
 main() {
     # Preserve original environment variable before any processing
     ORIGINAL_VIBE_TOOLS_SQUARE_HOME="${VIBE_TOOLS_SQUARE_HOME:-}"
 
-    # Initialize configuration and logging early so that
-    # VIBE_TOOLS_SQUARE_HOME is available even when showing usage
+    # Initialize configuration first to set VIBE_TOOLS_SQUARE_HOME
     init_system
+    
+    # Make sure directories exist before setting up logging
+    ensure_directories_exist
+    
+    # Now initialize logging when directories are ready
     init_logging
     check_dependencies
 

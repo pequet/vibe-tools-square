@@ -6,15 +6,19 @@ set -euo pipefail
 
 # Load provider presets
 load_provider_presets() {
-    local presets_file="$VIBE_TOOLS_SQUARE_HOME/config/providers.conf"
+    local runtime_presets_file="$VIBE_TOOLS_SQUARE_HOME/config/providers.conf"
+    local assets_presets_file="$SCRIPT_DIR/assets/.vibe-tools-square/config/providers.conf"
     
-    # Loading provider presets from: $presets_file
+    # Loading provider presets - runtime first, then assets fallback
     
-    if [[ -f "$presets_file" ]]; then
-        source "$presets_file"
-        # Provider presets loaded
+    if [[ -f "$runtime_presets_file" ]]; then
+        source "$runtime_presets_file"
+        # Provider presets loaded from runtime: $runtime_presets_file
+    elif [[ -f "$assets_presets_file" ]]; then
+        source "$assets_presets_file"
+        # Provider presets loaded from assets: $assets_presets_file
     else
-        # Provider presets file not found - this is OK, will use direct values
+        # Provider presets file not found in runtime or assets - this is OK, will use direct values
         return 0
     fi
 }

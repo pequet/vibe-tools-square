@@ -6,11 +6,11 @@ set -euo pipefail
 
 # Utility functions (since utils are sourced by run-prompt.sh)
 setup_vibe_tools_logging() {
-    # Set log file path for the logging utilities
-    LOG_FILE_PATH="$VIBE_TOOLS_SQUARE_HOME/logs/run-prompt.log"
+    # Create log directory first
+    mkdir -p "$VIBE_TOOLS_SQUARE_HOME/logs"
     
-    # Ensure log directory exists
-    ensure_log_directory
+    # Set log file path for the logging utilities AFTER ensuring directory exists
+    export LOG_FILE_PATH="$VIBE_TOOLS_SQUARE_HOME/logs/run-prompt.log"
 }
 
 # Check if command exists
@@ -49,8 +49,11 @@ CONFIG_FILE=""
 
 # Load configuration from file
 load_config() {
-    # Debug: Loading configuration
+    # Make sure basic directories exist first
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    mkdir -p "$VIBE_TOOLS_SQUARE_HOME/logs"
     
+    # Debug: Loading configuration
     if [[ -f "$CONFIG_FILE" ]]; then
         # Source the config file in a safe way
         set -a  # Export all variables
@@ -63,16 +66,28 @@ load_config() {
         setup_default_config
     fi
     
-    # Validate required directories exist
+    # Ensure all required directories exist
     ensure_directories_exist
 }
 
 # Set up default configuration if file doesn't exist
 setup_default_config() {
-    print_error "Configuration file not found and no default config available"
-    print_error "Please run the install script to set up the runtime environment"
-    print_error "Example: ./scripts/install.sh"
-    exit 1
+    # Create required directories first
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    mkdir -p "$VIBE_TOOLS_SQUARE_HOME/logs"
+    
+    # Check for template file
+    local template_file="$SCRIPT_DIR/src/default.conf.template"
+    if [[ -f "$template_file" ]]; then
+        # Use template to create config file
+        cp "$template_file" "$CONFIG_FILE"
+    else
+        # Create a minimal config file
+        echo "# Default configuration" > "$CONFIG_FILE"
+        echo "LOG_FILE_PATH=\"$VIBE_TOOLS_SQUARE_HOME/logs/run-prompt.log\"" >> "$CONFIG_FILE"
+    fi
+    
+    print_warning "Created default configuration at $CONFIG_FILE"
 }
 
 # Ensure required directories exist
@@ -106,7 +121,15 @@ get_config() {
 init_config() {
     # Initializing configuration system
     detect_runtime_home
+    
+    # Set config file path
     CONFIG_FILE="$VIBE_TOOLS_SQUARE_HOME/config/default.conf"
+    
+    # Ensure basic directories exist before trying to use them
+    mkdir -p "$VIBE_TOOLS_SQUARE_HOME/config"
+    mkdir -p "$VIBE_TOOLS_SQUARE_HOME/logs"
+    
+    # Now we can safely load the config
     load_config
     # Configuration system initialized
 }

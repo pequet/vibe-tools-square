@@ -9,7 +9,9 @@ Template Parameters:
 - Description: {{DESCRIPTION}}
 
 File Content Injection Test:
+<DOCUMENTATION>
 {{DOCUMENTATION}}
+</DOCUMENTATION>
 
 This template demonstrates:
 1. Date/time placeholders

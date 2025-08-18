@@ -29,7 +29,7 @@ globs: *
 ## DEBUGGING
 
 *   When modifying files, especially during automated processes, always back up existing files before overwriting them. Use a timestamped `.bak` extension (e.g., `.bak-YYYY-MM-DD_HHMMSS`).
-*   **CRITICAL:** During testing, only use `gemini` and `gemini-2.0-flash` models to avoid incurring excessive costs.
+*   **CRITICAL:** During testing, only use `gemini` and `gemini-2.0-flash` models to avoid incurring excessive costs. If using `gemini`, `free` is NOT a valid provider and should be avoided.
 
 ## WORKFLOW & RELEASE RULES
 
@@ -220,6 +220,7 @@ globs: *
     *   It checks for task configuration files in the runtime environment first (`~/.vibe-tools-square/tasks/`).
     *   If not found, it checks in the repository environment relative to the `run_prompt.sh` file (e.g., in an `assets` folder).
     *   Runtime configurations take precedence over repository assets.
+*   If the system finds a `providers.conf` file in the runtime environment (`~/.vibe-tools-square/config/`), it will use that file. If not found, it will look in the repository assets.
 *   The install script should create the folder structure for tasks and config in the runtime environment but not move the task templates or configs from assets. It should create READMEs in both the templates and tasks folders explaining the discovery process.
 
 ### Template Placeholders
@@ -349,3 +350,77 @@ The following tasks are provided in the repo assets:
 *   **analyze-codebase** - Code structure analysis
 *   **code-review** - Code review assistance
 *   **feature-planning** - New feature planning
+
+### Creating Custom Tasks: Extended Rules
+
+1.  When creating a custom task configuration file (`.conf`), ensure that it is placed in the `~/.vibe-tools-square/tasks/` directory. This directory is part of the runtime environment and takes precedence over repository assets.
+
+2.  When defining a custom task, the following parameters are available:
+    *   `TASK_NAME`: The name of the task (e.g., `hello`).  This is the name used to invoke the task from the command line (e.g., `./run-prompt.sh hello`).
+    *   `TASK_DESCRIPTION`: A brief description of the task.
+    *   `TASK_TYPE`: The type of task (`ask`, `repo`, or `plan`).
+    *   `TASK_TEMPLATE`: (Optional) The name of the template to use.
+    *   `TASK_MODEL`: (Optional) The default model to use.
+    *   `TASK_PROVIDER`: (Optional) The default provider to use. If using `gemini`, `gemini-2.0-flash` is recommended for cost savings during testing. If using `gemini`, `free` is NOT a valid provider and should be avoided.
+    *   `TASK_FILE_MODEL`: (For `PLAN` tasks only, Optional) Model for file identification.
+    *   `TASK_FILE_PROVIDER`: (For `PLAN` tasks only, Optional) Provider for file identification.
+    *   `TASK_THINKING_MODEL`: (For `PLAN` tasks only, Optional) Model for plan generation.
+    *   `TASK_THINKING_PROVIDER`: (For `PLAN` tasks only, Optional) Provider for plan generation.
+    *   `TASK_INCLUDE_PATTERNS`: (For `REPO` and `PLAN` tasks only, Optional) Default include patterns.
+    *   `TASK_EXCLUDE_PATTERNS`: (Optional) Default exclude patterns.
+    *   `TASK_DEFAULT_PARAMS`: (Optional) Default parameters to pass to the task. Use `--max-tokens=4000` or lower during testing to reduce costs.
+    *   Template Variables: Any variables used in the template (e.g., `TASK_FOCUS="your focus area"` to set `{{FOCUS}}`).
+    *   `TASK_OUTPUT_PREFIX`: (Optional) Prefix for output files. Currently, the output file name cannot be timestamped via the configuration file. However, command substitution *is* supported so `TASK_DEFAULT_PARAMS="--output-file=Core/Models/0.Inbox/$(date +%Y-%m-%d_%H%M)-hello-world.md"` is a valid output file specification.
+
+3.  **Important Considerations:**
+
+    *   Ensure that the specified template (using `TASK_TEMPLATE`) exists.
+    *   When specifying models and providers, verify that they are valid and available. Use `gemini` and `gemini-2.0-flash` for cost-effective testing.
+    *   Be aware that there is no explicit mechanism to automatically convert task-specific variables to command-line parameters. You may need to adjust the `TASK_DEFAULT_PARAMS` or the template accordingly.
+    *   The output file naming scheme, including timestamping, is configurable via command substitution in the `TASK_DEFAULT_PARAMS` setting.
+    *   The `TASK_PROVIDER` setting of `free` is invalid and should not be used.
+*   Before running `run-prompt.sh`, ensure the environment is initialized by running `install.sh`. (This rule may be outdated, see "Correcting Operational Sequence" below.)
+
+### Bug Fixes and Codebase Integrity
+
+*   **CRITICAL:** Under no circumstances should core utilities or shared scripts like `logging_utils.sh` be modified directly to resolve issues in specific tasks. Such utilities are used by numerous scripts, and direct modifications can introduce widespread problems.
+*   **Directory Creation:** Do not create directories manually outside of the designated setup scripts or utilities. The `ensure_directories_exist()` function in `config.sh` is designed to handle directory creation.
+*   **Initialization Requirement:** The Vibe Tools Square environment must be properly initialized before running tasks. This involves running the `install.sh` script to set up the runtime environment. (This rule may be outdated, see "Correcting Operational Sequence" below.)
+
+### Correcting Operational Sequence
+
+*   The `ensure_directories_exist()` function must be called before `setup_vibe_tools_logging()` to ensure that log directories are available before logging is initialized.
+*   To fix this, modify the order of operations in `run-prompt.sh` as follows:
+```diff
+--- a/run-prompt.sh
++++ b/run-prompt.sh
+@@ -144,12 +144,12 @@
+ 
+     # Initialize system
+     init_system
++
++    # Initialize logging
++    init_logging
+     
+ -    # Initialize logging
+ -    init_logging
+ -
+     # Load configuration
+     load_config
+ -    
+ -    # Initialize logging
+ -    init_logging
+ +
+ +
+```
+*   **NOTE:** The rule about the "Initialization Requirement" (running `install.sh`) may be outdated if the above fix is implemented. Further testing is needed to confirm.
+
+### Custom Tasks: Parameters
+
+*   The `--go` flag **must not** be hardcoded in the task configuration (e.g., `hello.conf`). Users should be able to run tasks with or without the `--go` flag.
+*   When specifying `TASK_MODEL` and `TASK_PROVIDER` in a task configuration file (`.conf`), the following rules apply:
+    *   If `TASK_MODEL` contains a forward slash (e.g., `"gemini/free"`), the `resolve_provider_model()` function in `providers.sh` will be called to determine the final provider and model. In this case, the `TASK_PROVIDER` parameter should be omitted.
+    *   If `TASK_MODEL` does not contain a forward slash (e.g., `"free"`), the `resolve_provider_model()` function will not be called. If `TASK_PROVIDER` is also specified, the system will pass both values directly to vibe-tools (e.g., `--model=free --provider=gemini`). However, it is recommended to use the forward slash notation for clarity and compatibility with `providers.conf`.
+    *   To ensure proper resolution of models and providers, especially when using `gemini/free`, it is recommended to create a `providers.conf` file in the runtime environment (`~/.vibe-tools-square/config/`) by copying the `providers.conf.example` file from the repository assets. This file maps model names to their corresponding provider and model settings. The system will look for `providers.conf` in this order:
+        1.  Runtime: `~/.vibe-tools-square/config/providers.conf`
+        2.  Assets: `providers.conf`

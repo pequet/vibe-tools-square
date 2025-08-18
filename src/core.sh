@@ -68,16 +68,34 @@ execute_task() {
     # Source the task configuration
     source "$task_file"
     
+    # Parse TASK_DEFAULT_PARAMS if it exists
+    local default_params=()
+    if [[ -n "${TASK_DEFAULT_PARAMS:-}" ]]; then
+        # Simple approach: use eval with array assignment to handle quoted parameters properly
+        # This expands command substitutions like $(date ...) and preserves quoted strings
+        eval "default_params=($TASK_DEFAULT_PARAMS)"
+    fi
+    
+    # Combine default params with user-provided params
+    # User params come after to override defaults
+    local all_params=()
+    if [[ ${#default_params[@]} -gt 0 ]]; then
+        all_params+=("${default_params[@]}")
+    fi
+    if [[ $# -gt 0 ]]; then
+        all_params+=("$@")
+    fi
+    
     # Handle different task types based on their configuration
     case "$TASK_TYPE" in
         "ask")
-            execute_ask_task "$@"
+            execute_ask_task "${all_params[@]+"${all_params[@]}"}"
             ;;
         "repo")
-            execute_repo_task "$@"
+            execute_repo_task "${all_params[@]+"${all_params[@]}"}"
             ;;
         "plan")
-            execute_plan_task "$@"
+            execute_plan_task "${all_params[@]+"${all_params[@]}"}"
             ;;
         *)
             # Generic task handler - for now just show that the task exists
@@ -102,6 +120,12 @@ execute_ask_task() {
     local max_tokens=""
     local params=()
     
+    # Set template_name from TASK_TEMPLATE if available
+    if [[ -n "${TASK_TEMPLATE:-}" ]]; then
+        print_info "Using template from task configuration: $TASK_TEMPLATE"
+        template_name="$TASK_TEMPLATE"
+    fi
+    
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -119,6 +143,11 @@ execute_ask_task() {
                 ;;
             --output-file=*)
                 output_file="${1#*=}"
+                # Remove surrounding quotes if present
+                if [[ $output_file == \"*\" ]]; then
+                    output_file="${output_file%\"}"
+                    output_file="${output_file#\"}"
+                fi
                 ;;
             --max-tokens=*)
                 max_tokens="${1#*=}"
@@ -150,8 +179,20 @@ execute_ask_task() {
         exit 1
     fi
     
+    # Use model from task config if not specified in command
+    if [[ -z "$model" && -n "${TASK_MODEL:-}" ]]; then
+        print_info "Using model from task configuration: $TASK_MODEL"
+        model="$TASK_MODEL"
+    fi
+
+    # Use provider from task config if not specified in command
+    if [[ -z "$provider" && -n "${TASK_PROVIDER:-}" ]]; then
+        print_info "Using provider from task configuration: $TASK_PROVIDER"
+        provider="$TASK_PROVIDER"
+    fi
+
     if [[ -z "$model" ]]; then
-        print_error "Model is required (--model=<provider/model>)"
+        print_error "Model is required (--model=<model-name> or TASK_MODEL in config)"
         exit 1
     fi
     
@@ -204,7 +245,7 @@ execute_ask_task() {
     
     # Resolve provider/model using providers.conf mapping
     if [[ "$model" == */* ]]; then
-        # Use the provider mapping system
+        # Model contains slash - use the provider mapping system
         local resolved
         if ! resolved=$(resolve_provider_model "$model"); then
             print_error "Provider/model mapping failed for: $model"
@@ -212,6 +253,18 @@ execute_ask_task() {
         fi
         provider="${resolved%%|*}"
         model="${resolved#*|}"
+    elif [[ -n "$provider" ]]; then
+        # Separate provider and model specified - try to resolve using provider/model combination
+        local combined_model="${provider}/${model}"
+        local resolved
+        if resolved=$(resolve_provider_model "$combined_model" 2>/dev/null); then
+            provider="${resolved%%|*}"
+            model="${resolved#*|}"
+            print_info "Resolved $provider/$model to provider='$provider' model='$model'"
+        else
+            # No mapping found - use values as-is
+            print_info "No provider mapping found for $provider/$model - using direct values"
+        fi
     elif [[ -z "$provider" ]]; then
         # No provider specified, use model as-is
         model="$model"
@@ -257,37 +310,37 @@ execute_ask_task() {
     
     # Log all execution details
     {
-        print_info "=== VIBE-TOOLS SQUARE EXECUTION LOG ==="
-        print_info "Timestamp: $(date)"
-        print_info "Mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
-        print_info ""
-        print_info "=== EXECUTION PLAN DETAILS ==="
+        echo "=== VIBE-TOOLS SQUARE EXECUTION LOG ==="
+        echo "Timestamp: $(date)"
+        echo "Mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
+        echo ""
+        echo "=== EXECUTION PLAN DETAILS ==="
         if [[ -n "$template_name" ]]; then
-            print_info "Template: $template_name"
-            print_info "Template source: $template_path"
+            echo "Template: $template_name"
+            echo "Template source: $template_path"
         else
-            print_info "Prompt: Direct text input"
+            echo "Prompt: Direct text input"
         fi
-        print_info "Model: $model"
-        [[ -n "$provider" ]] && print_info "Provider: $provider" || print_info "Provider: (using vibe-tools default)"
-        [[ -n "$max_tokens" ]] && print_info "Max tokens: $max_tokens" || print_info "Max tokens: (using vibe-tools default)"
-        print_info "Working directory: $(pwd)"
-        print_info "Output destination: $output_file"
-        print_info "Parameters: ${#params[@]} custom parameters"
+        echo "Model: $model"
+        [[ -n "$provider" ]] && echo "Provider: $provider" || echo "Provider: (using vibe-tools default)"
+        [[ -n "$max_tokens" ]] && echo "Max tokens: $max_tokens" || echo "Max tokens: (using vibe-tools default)"
+        echo "Working directory: $(pwd)"
+        echo "Output destination: $output_file"
+        echo "Parameters: ${#params[@]} custom parameters"
         if [[ ${#params[@]} -gt 0 ]]; then
-            print_info "Parameter details:"
+            echo "Parameter details:"
             for param in "${params[@]}"; do
                 if [[ "$param" == --*=file:* ]]; then
                     local param_name="${param%%=*}"
                     local file_path="${param#*=file:}"
-                    print_info "  $param_name: FILE INJECTION from '$file_path' (resolved from current directory: $(pwd))"
+                    echo "  $param_name: FILE INJECTION from '$file_path' (resolved from current directory: $(pwd))"
                 else
-                    print_info "  $param"
+                    echo "  $param"
                 fi
             done
         fi
-        print_info ""
-        print_info "=== VIBE-TOOLS COMMAND ==="
+        echo ""
+        echo "=== VIBE-TOOLS COMMAND ==="
         # Show the properly escaped command that will actually be executed using legacy technique
         local safe_content_for_log=${processed_content//\'/\'\\\'\'}
         # Quote args for display
@@ -296,11 +349,11 @@ execute_ask_task() {
             local q=${a//\'/\'\\\'\'}
             display_cmd+=" '${q}'"
         done
-        print_info "$display_cmd"
-        print_info ""
-        print_info "=== PROCESSED TEMPLATE CONTENT ==="
-        print_info "$processed_content"
-        print_info ""
+        echo "$display_cmd"
+        echo ""
+        echo "=== PROCESSED TEMPLATE CONTENT ==="
+        echo "$processed_content"
+        echo ""
     } > "$log_file"
     
     # Show execution plan for both dry run and live execution
@@ -330,7 +383,7 @@ execute_ask_task() {
     fi
     
     if $go_flag; then
-    print_step "Executing vibe-tools ask command from runtime content directory"
+        print_step "Executing vibe-tools ask command from runtime content directory"
         
         # Log the execution attempt
         echo "=== EXECUTION ATTEMPT ===" >> "$log_file"
@@ -341,15 +394,15 @@ execute_ask_task() {
         local safe_content=${processed_content//\'/\'\\\'\'}
         
         # Build the command string with proper quoting
-    local cmd_string="$display_cmd"
+        local cmd_string="$display_cmd"
         
-    # Execute from ICE content directory for deterministic environment
-    local prev_dir="$(pwd)"
-    cd "$VIBE_TOOLS_SQUARE_HOME/content"
-    local command_output
-    command_output=$(eval "$cmd_string" 2>&1)
-    local exit_code=$?
-    cd "$prev_dir"
+        # Execute from ICE content directory for deterministic environment
+        local prev_dir="$(pwd)"
+        cd "$VIBE_TOOLS_SQUARE_HOME/content"
+        local command_output
+        command_output=$(eval "$cmd_string" 2>&1)
+        local exit_code=$?
+        cd "$prev_dir"
         
         # Log the results
         {
@@ -371,6 +424,14 @@ execute_ask_task() {
             exit $exit_code
         fi
     else
+        # Log dry run completion
+        {
+            echo "=== DRY RUN COMPLETION ==="
+            echo "Status: Command prepared but not executed (no --go flag)"
+            echo "To execute: Add --go flag to the command"
+            echo "Log completed at: $(date)"
+        } >> "$log_file"
+        
         print_info ""
         print_info "🚫 DRY RUN MODE - Command not executed"
         print_info "💡 Use --go flag to actually execute the command"
