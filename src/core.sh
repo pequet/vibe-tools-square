@@ -294,10 +294,7 @@ build_vibe_command_args() {
     
     # Add max-tokens if specified
     [[ -n "$max_tokens" ]] && vibe_args+=("--max-tokens=$max_tokens")
-    
-    # Add --go flag if specified
-    [[ "$go_flag" == true ]] && vibe_args+=("--go")
-    
+        
     # Handle output file - default to timestamped file in output directory
     if [[ -n "$output_file" ]]; then
         # Convert to absolute path if relative
