@@ -154,3 +154,13 @@ globs: *
 ### Displaying Configuration and Log File Usage
 *   The script must display which `default.conf` file is being used (runtime or repository).
 *   The script must also display which log file is being written to (runtime or repository).
+
+### Code Refactoring Rules
+
+*   `execute_ask_task` in `core.sh` must be refactored to use `run_vibe_command_from_runtime`.
+*   All three functions (`execute_ask_task`, `execute_repo_task`, `execute_plan_task`) must use the same template path resolution logic. Create a shared function in `core.sh` for this purpose.
+*   All three functions should implement detailed parameter display. Write a function and use it for all three functions.
+*   Use shared functions for command display formatting in all three functions.
+*   Use shared functions for execution result handling in all three functions.
+*   Messaging utilities should be used for logging in all three functions, converting existing logging as needed.
+*   Be extraordinarily careful not to break any existing functionality during refactoring.
