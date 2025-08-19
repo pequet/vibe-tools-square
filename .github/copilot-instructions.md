@@ -424,3 +424,39 @@ The following tasks are provided in the repo assets:
     *   To ensure proper resolution of models and providers, especially when using `gemini/free`, it is recommended to create a `providers.conf` file in the runtime environment (`~/.vibe-tools-square/config/`) by copying the `providers.conf.example` file from the repository assets. This file maps model names to their corresponding provider and model settings. The system will look for `providers.conf` in this order:
         1.  Runtime: `~/.vibe-tools-square/config/providers.conf`
         2.  Assets: `providers.conf`
+
+### Provider Configuration Lookup Rules
+
+*   The system uses a runtime-first fallback for provider configuration discovery:
+    1.  It checks for a `providers.conf` file in the runtime environment first (`~/.vibe-tools-square/config/`).
+    2.  If not found, it checks in the repository assets.
+
+### Default Configuration File Handling
+
+*   When loading the `default.conf` file, the system must adhere to the following rules:
+    1.  **Runtime Priority:** First, search for `default.conf` in the runtime environment (`~/.vibe-tools-square/config/`).
+    2.  **Asset Fallback:** If `default.conf` is not found in the runtime environment, search for it in the repository's assets folder.
+    3.  **No Creation/Modification:** The script must *not* create or modify `default.conf` if it doesn't exist in either location.
+    4.  **Halt on Missing:** If `default.conf` is not found in either the runtime environment or the repository's assets folder, the script must halt execution with a helpful message.
+    5. **No Hardcoded Paths:** The script must not hardcode any paths, especially log file paths, within a default configuration file. The location of log files should be determined dynamically at runtime (or via the repository's log file path), not read from a static configuration file.
+*   **Directory Creation:** The system must not create the config directory in the runtime environment if the `default.conf` file is found in the assets folder and not in the runtime environment. The config directory in the runtime environment should only be created if the `default.conf` file is found in, and used from, the runtime environment.
+*   **`init_config()` Modification**: Ensure that `init_config()` does not create the config directory before checking for the existence of `default.conf`.
+
+### Corrected Directory Creation Logic
+*   The system must only create directories when they are needed for writing, not for reading. This applies to both the configuration directory and the logs directory.
+*   The system must check if a directory exists before attempting to write to it, and create the directory if it does not exist.
+*   Runtime directories are only created and used if the runtime config exists. If the runtime config does not exist, the system switches to using the repo folders instead, and does not create the runtime directories.
+*   If the runtime config does not exist, the system must use the repo folders instead and not create the runtime directories.
+*   The system must check if the runtime logs directory exists before writing to it. If it does not exist, the system should write to the repo logs directory instead.
+*   If the runtime config does not exist, then the system must use the repo folders instead and not create the runtime directories.
+*   The system must check if the runtime logs directory exists before writing to it. If it does not exist, the system should write to the repo logs directory instead.
+
+### Displaying Configuration and Log File Usage
+*   The script must display which `default.conf` file is being used (runtime or repository).
+*   The script must also display which log file is being written to (runtime or repository).
+
+### Logging Directory Rules
+
+*   If a runtime configuration exists, then a runtime logs directory will be created, and log files will be written to the runtime logs directory.
+*   If a runtime configuration does not exist, then a runtime logs directory will not be created, and log files will be written to the repo logs directory instead.
+*   The system must check if the runtime logs directory exists before writing to it. If it does not exist, the system should write to the repo logs directory instead.

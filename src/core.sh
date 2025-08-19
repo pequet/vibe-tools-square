@@ -292,7 +292,7 @@ execute_ask_task() {
             task_type="ask_${template_name}"
         fi
         local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_${task_type}.md"
-        mkdir -p "$VIBE_TOOLS_SQUARE_HOME/output"
+        ensure_output_directory
         vibe_args+=("--save-to=$default_output")
         output_file="$default_output"  # Set for later reference
     fi
