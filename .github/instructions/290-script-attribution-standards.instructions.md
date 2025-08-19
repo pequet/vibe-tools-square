@@ -32,10 +32,10 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 
 # ASCII Art Banner (Project-Specific - Printed to Terminal)
 echo "
-█ █ █  Vibe-Tools Square
- █ █   Version:  1.0.0
- █ █   Author:   Benjamin Pequet
-█ █ █  Github:   https://github.com/pequet/vibe-tools-square/
+█████  Vibe-Tools Square: Query Template Engine
+█   █  Version: 1.0.0
+█   █  Author: Benjamin Pequet
+█████  GitHub: https://github.com/pequet/vibe-tools-square/
 "
 
 # Purpose:
@@ -72,10 +72,10 @@ set -e
 set -u
 set -o pipefail
 
-# █ █ █  Vibe-Tools Square: Audio Processing & Transcription System
-#  █ █   Version: 1.0.0
-#  █ █   Author: Benjamin Pequet
-# █ █ █  GitHub: https://github.com/pequet/vibe-tools-square/
+#  █████  Vibe-Tools Square: Query Template Engine
+#  █   █  Version: 1.0.0
+#  █   █  Author: Benjamin Pequet
+#  █████  GitHub: https://github.com/pequet/vibe-tools-square/
 #
 # Purpose:
 #   [Detailed description of the script's purpose, what problems it solves,

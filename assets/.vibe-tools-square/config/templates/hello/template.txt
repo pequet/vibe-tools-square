@@ -19,7 +19,4 @@ This template demonstrates:
 3. File content injection (if --documentation=file:path/to/file.md is used)
 
 You can test this template with commands like:
-./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --project="My Project" --description="Testing the new modular system"
-
-Or with file injection:
-./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --name="Test User" --documentation=file:README.md
+./run-prompt.sh ask --template=hello --name="Test User" --project="My Project"

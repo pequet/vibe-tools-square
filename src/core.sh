@@ -1,8 +1,14 @@
 #!/bin/bash
-# core.sh - Main orchestration logic for vibe-tools-square
-# This is the heart of the system that coordinates all other modules
 
-set -euo pipefail
+# Standard Error Handling
+set -e
+set -u
+set -o pipefail
+
+# Author: Benjamin Pequet
+# Purpose: Main orchestration logic that coordinates all system modules and handles task execution.
+# Project: https://github.com/pequet/vibe-tools-square/ 
+# Refer to main project for detailed docs.
 
 # Dependencies are sourced by run-prompt.sh
 # No need to re-source them here
@@ -71,19 +77,37 @@ execute_task() {
     # Parse TASK_DEFAULT_PARAMS if it exists
     local default_params=()
     if [[ -n "${TASK_DEFAULT_PARAMS:-}" ]]; then
+        # Process any placeholders in the TASK_DEFAULT_PARAMS string
+        # This allows config files to use placeholders like {{USER_NAME}}
+        local processed_params="$TASK_DEFAULT_PARAMS"
+        
+        # Process placeholders using the remaining command line arguments
+        # This allows users to pass values like --user_name="Bobby" that will substitute {{USER_NAME}}
+        # Always process placeholders to handle default values, even when no parameters are provided
+        processed_params=$(process_placeholders "$processed_params" "$@")
+        
         # Simple approach: use eval with array assignment to handle quoted parameters properly
         # This expands command substitutions like $(date ...) and preserves quoted strings
-        eval "default_params=($TASK_DEFAULT_PARAMS)"
+        eval "default_params=($processed_params)"
     fi
     
-    # Combine default params with user-provided params
-    # User params come after to override defaults
+    # Use only the processed default params (after placeholder substitution)
+    # Command line params are only for placeholder substitution, not passed to vibe-tools
     local all_params=()
     if [[ ${#default_params[@]} -gt 0 ]]; then
         all_params+=("${default_params[@]}")
     fi
-    if [[ $# -gt 0 ]]; then
-        all_params+=("$@")
+    
+    # Check for --go flag specifically and add it if present
+    local go_flag_found=false
+    for arg in "$@"; do
+        if [[ "$arg" == "--go" ]]; then
+            go_flag_found=true
+            break
+        fi
+    done
+    if [[ "$go_flag_found" == true ]]; then
+        all_params+=("--go")
     fi
     
     # Handle different task types based on their configuration
@@ -205,10 +229,31 @@ execute_ask_task() {
     if [[ -n "$template_name" ]]; then
         # Template mode - load and process template
         print_step "Loading template: $template_name"
-        local template_path
-        template_path=$(find_template "$template_name")
+        
+        # Find template file in search paths (moved from find_template function)
+        local template_path=""
+        local search_paths=(
+            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name.txt"
+            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name/template.txt"
+            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name.txt"
+            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
+        )
+        
+        for path in "${search_paths[@]}"; do
+            if [[ -f "$path" ]]; then
+                template_path="$path"
+                break
+            fi
+        done
+        
+        if [[ ! -f "$template_path" ]]; then
+            print_error "Template not found: $template_name"
+            exit 1
+        fi
+        
+        # Load template content (previously in load_template function)
         local template_content
-        template_content=$(load_template "$template_name")
+        template_content=$(cat "$template_path")
         content_source="template: $template_name (from $template_path)"
         
         print_step "Processing placeholders"
@@ -277,6 +322,9 @@ execute_ask_task() {
     # Add max-tokens if specified
     [[ -n "$max_tokens" ]] && vibe_args+=("--max-tokens=$max_tokens")
     
+    # Add --go flag if specified
+    [[ "$go_flag" == true ]] && vibe_args+=("--go")
+    
     # Handle output file - default to timestamped file in output directory
     if [[ -n "$output_file" ]]; then
         # Convert to absolute path if relative
@@ -314,6 +362,9 @@ execute_ask_task() {
         echo "Timestamp: $(date)"
         echo "Mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
         echo ""
+        echo "=== ORIGINAL COMMAND ==="
+        echo "Command: ${ORIGINAL_COMMAND_LINE:-./run-prompt.sh [parameters not captured]}"
+        echo ""
         echo "=== EXECUTION PLAN DETAILS ==="
         if [[ -n "$template_name" ]]; then
             echo "Template: $template_name"
@@ -343,11 +394,16 @@ execute_ask_task() {
         echo "=== VIBE-TOOLS COMMAND ==="
         # Show the properly escaped command that will actually be executed using legacy technique
         local safe_content_for_log=${processed_content//\'/\'\\\'\'}
-        # Quote args for display
+        # Build clean display command without excessive quoting
         local display_cmd="$vibe_cmd '$safe_content_for_log'"
         for a in "${vibe_args[@]}"; do
-            local q=${a//\'/\'\\\'\'}
-            display_cmd+=" '${q}'"
+            # Only add quotes if the argument contains spaces or special characters
+            if [[ "$a" == *" "* ]] || [[ "$a" == *"'"* ]]; then
+                local q=${a//\'/\'\\\'\'}
+                display_cmd+=" '${q}'"
+            else
+                display_cmd+=" ${a}"
+            fi
         done
         echo "$display_cmd"
         echo ""
@@ -393,14 +449,18 @@ execute_ask_task() {
         # Replace each ' with '\''
         local safe_content=${processed_content//\'/\'\\\'\'}
         
-        # Build the command string with proper quoting
-        local cmd_string="$display_cmd"
+        # Build the execution command string properly (separate from display)
+        local exec_cmd="$vibe_cmd '$safe_content'"
+        for a in "${vibe_args[@]}"; do
+            local escaped_arg=${a//\'/\'\\\'\'}
+            exec_cmd+=" '$escaped_arg'"
+        done
         
         # Execute from ICE content directory for deterministic environment
         local prev_dir="$(pwd)"
         cd "$VIBE_TOOLS_SQUARE_HOME/content"
         local command_output
-        command_output=$(eval "$cmd_string" 2>&1)
+        command_output=$(eval "$exec_cmd" 2>&1)
         local exit_code=$?
         cd "$prev_dir"
         

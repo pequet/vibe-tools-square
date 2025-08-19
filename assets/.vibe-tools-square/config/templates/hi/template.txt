@@ -1,9 +1,0 @@
-Hi this is a template for testing whatever happens with "double quotes", 'single quotes' and `backticks` in the template.
-
-As well as in variables:
-
-1. {{STRING1}}
-2. {{STRING2}}
-3. {{STRING3}}
-
-Could you see without weird artifacts such as weird escaping of quotes the three words above? What are these three words?

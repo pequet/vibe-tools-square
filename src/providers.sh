@@ -1,8 +1,14 @@
 #!/bin/bash
-# providers.sh - AI provider preset handling
-# Manages different AI provider configurations and presets
 
-set -euo pipefail
+# Standard Error Handling
+set -e
+set -u
+set -o pipefail
+
+# Author: Benjamin Pequet
+# Purpose: AI provider configuration management for handling model presets and provider settings.
+# Project: https://github.com/pequet/vibe-tools-square/ 
+# Refer to main project for detailed docs.
 
 # Load provider presets
 load_provider_presets() {

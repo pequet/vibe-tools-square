@@ -5,10 +5,10 @@ set -e
 set -u
 set -o pipefail
 
-#   ██  Vibe-Tools Square: AI Query Template Engine
-#  █  █  Version: 1.0.0
-#    █   Author: Benjamin Pequet
-#   █    GitHub: https://github.com/pequet/vibe-tools-square/
+#  █████  Vibe-Tools Square: Query Template Engine
+#  █   █  Version: 1.0.0
+#  █   █  Author: Benjamin Pequet
+#  █████  GitHub: https://github.com/pequet/vibe-tools-square/
 #
 # Purpose:
 #   Installs the Vibe-Tools Square utility by performing these steps:
@@ -98,9 +98,9 @@ verify_source_files() {
         "$PROJECT_ROOT/run-prompt.sh"
         "$PROJECT_ROOT/src/core.sh"
         "$PROJECT_ROOT/src/config.sh"
-        "$PROJECT_ROOT/src/template.sh"
         "$PROJECT_ROOT/src/context.sh"
         "$PROJECT_ROOT/src/providers.sh"
+        "$PROJECT_ROOT/src/utils/template_utils.sh"
         "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf"
         "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json"
     )

@@ -5,7 +5,6 @@ This directory contains core shell scripts developed specifically for the Vibe-T
 ## Files Overview
 
 - **`core.sh`** - Main command processing and execution logic
-- **`template.sh`** - Template processing and variable replacement
 - **`context.sh`** - Context management and file handling
 - **`providers.sh`** - AI provider configuration and management
 - **`config.sh`** - Configuration loading and validation

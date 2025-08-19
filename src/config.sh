@@ -1,8 +1,14 @@
 #!/bin/bash
-# config.sh - Configuration management for vibe-tools-square
-# Handles loading and managing configuration from multiple sources
 
-set -euo pipefail
+# Standard Error Handling
+set -e
+set -u
+set -o pipefail
+
+# Author: Benjamin Pequet
+# Purpose: Configuration management that handles loading and merging config from multiple sources.
+# Project: https://github.com/pequet/vibe-tools-square/ 
+# Refer to main project for detailed docs.
 
 # Utility functions (since utils are sourced by run-prompt.sh)
 setup_vibe_tools_logging() {

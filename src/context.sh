@@ -1,8 +1,14 @@
 #!/bin/bash
-# context.sh - Isolated Context Environment (ICE) management
-# Handles preparation of curated working directory for repo/plan commands
 
-set -euo pipefail
+# Standard Error Handling
+set -e
+set -u
+set -o pipefail
+
+# Author: Benjamin Pequet
+# Purpose: Isolated Context Environment (ICE) management for preparing curated working directories.
+# Project: https://github.com/pequet/vibe-tools-square/ 
+# Refer to main project for detailed docs.
 
 # Local helpers
 ensure_directory() {
