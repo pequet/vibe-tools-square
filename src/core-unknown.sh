@@ -356,9 +356,6 @@ execute_ask_task() {
     fi
     local log_file="$VIBE_TOOLS_SQUARE_HOME/output/${log_timestamp}_${log_task_type}_execution.log"
     
-    # Ensure output directory exists before writing
-    ensure_output_directory
-    
     # Log all execution details
     {
         echo "=== VIBE-TOOLS SQUARE EXECUTION LOG ==="
@@ -805,8 +802,6 @@ run_vibe_command_from_runtime() {
     
     local log_timestamp=$(date +%Y-%m-%d_%H%M%S)
     local log_file="$VIBE_TOOLS_SQUARE_HOME/output/${log_timestamp}_${kind}_execution.log"
-    # Ensure output directory exists before writing
-    ensure_output_directory
     # Build safely quoted command string
     local quoted_cmd="$cmd"
     local arg

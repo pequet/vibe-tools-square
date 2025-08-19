@@ -27,6 +27,9 @@ globs: *
 
 ## WORKFLOW & RELEASE RULES
 
+*   **CRITICAL:** When refactoring code, especially core utilities or shared scripts, make changes incrementally, one change at a time, with thorough testing after each change to avoid breaking existing functionality. This is particularly important for functions like `execute_ask_task`, `execute_repo_task`, and `execute_plan_task` in `core.sh`.
+*   **CRITICAL:** During refactoring, pay close attention to parameter handling between `run-prompt.sh`, task configuration files, and templates. Ensure command-line arguments are correctly processed to replace placeholders in configuration files, and that the final parameters are passed correctly to the `vibe-tools` command.
+
 ## REFERENCES
 
 ### Extensive Chat Mode Rules
@@ -143,13 +146,17 @@ globs: *
 ### Bug Fixes and Codebase Integrity
 
 *   **CRITICAL:** Under no circumstances should core utilities or shared scripts like `logging_utils.sh` be modified directly to resolve issues in specific tasks. Such utilities are used by numerous scripts, and direct modifications can introduce widespread problems.
-*   **Directory Creation:** Do not create directories manually outside of the designated setup scripts or utilities. 
+*   **Directory Creation:** Do not create directories manually outside of the designated setup scripts or utilities. The `ensure_output_directory` function must be used to create output directories before writing to log files.
+*   The system must only create directories when they are needed for writing, not for reading. This applies to both the configuration directory and the logs directory.
+*   The system must check if a directory exists before attempting to write to it, and create the directory if it does not exist.
+*   The `ensure_log_directory` function from `#file:logging_utils.sh` must be used to ensure the log directory exists before writing to it. **NOTE:** The `ensure_output_directory` is preferred, but `ensure_log_directory` can be used if necessary.
 
 ### Correcting Operational Sequence
 
 ### Corrected Directory Creation Logic
 *   The system must only create directories when they are needed for writing, not for reading. This applies to both the configuration directory and the logs directory.
 *   The system must check if a directory exists before attempting to write to it, and create the directory if it does not exist.
+*   The `ensure_log_directory` function from `#file:logging_utils.sh` must be used to ensure the log directory exists before writing to it.
 
 ### Displaying Configuration and Log File Usage
 *   The script must display which `default.conf` file is being used (runtime or repository).
