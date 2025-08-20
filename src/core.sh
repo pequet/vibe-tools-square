@@ -107,7 +107,175 @@ parse_ask_task_parameters() {
             *)
                 print_error "Unknown parameter: $1"
                 print_info "Usage: run-prompt.sh ask --template=<name> OR --prompt=<text|file:path> --model=<provider/model> [--param=value] [--go]"
+            exit 1
+            ;;
+    esac
+        shift
+    done
+}
+
+# Parse parameters for repo task - extends ask task parameters with repo-specific ones
+parse_repo_task_parameters() {
+    local task_template="$1"
+    shift
+    
+    # Initialize all parsed values (ask task ones + repo-specific ones)
+    PARSED_TEMPLATE_NAME=""
+    PARSED_PROMPT_CONTENT=""
+    PARSED_MODEL=""
+    PARSED_PROVIDER=""
+    PARSED_OUTPUT_FILE=""
+    PARSED_GO_FLAG=false
+    PARSED_MAX_TOKENS=""
+    PARSED_PARAMS=()
+    PARSED_INCLUDES=()
+    PARSED_EXCLUDES=()
+    PARSED_QUESTION=""
+    
+    # Set template_name from TASK_TEMPLATE if available
+    if [[ -n "$task_template" ]]; then
+        print_info "Using template from task configuration: $task_template"
+        PARSED_TEMPLATE_NAME="$task_template"
+    fi
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --template=*)
+                PARSED_TEMPLATE_NAME="${1#*=}"
+                ;;
+            --prompt=*)
+                PARSED_PROMPT_CONTENT="${1#*=}"
+                ;;
+            --model=*)
+                PARSED_MODEL="${1#*=}"
+                ;;
+            --provider=*)
+                PARSED_PROVIDER="${1#*=}"
+                ;;
+            --output-file=*)
+                PARSED_OUTPUT_FILE="${1#*=}"
+                # Remove surrounding quotes if present
+                if [[ $PARSED_OUTPUT_FILE == \"*\" ]]; then
+                    PARSED_OUTPUT_FILE="${PARSED_OUTPUT_FILE%\"}"
+                    PARSED_OUTPUT_FILE="${PARSED_OUTPUT_FILE#\"}"
+                fi
+                ;;
+            --max-tokens=*)
+                PARSED_MAX_TOKENS="${1#*=}"
+                ;;
+            --include=*)
+                PARSED_INCLUDES+=("${1#*=}")
+                ;;
+            --exclude=*)
+                PARSED_EXCLUDES+=("${1#*=}")
+                ;;
+            --show-context)
+                show_context
+                exit 0
+                ;;
+            --go)
+                PARSED_GO_FLAG=true
+                ;;
+            --*=*)
+                # Collect custom parameters for template processing
+                PARSED_PARAMS+=("$1")
+                ;;
+            *)
+                # First non-flag is the question string if provided as bare arg
+                if [[ -z "$PARSED_QUESTION" ]]; then
+                    PARSED_QUESTION="$1"
+                else
+                print_error "Unknown parameter: $1"
+                    print_info "Usage: run-prompt.sh repo --prompt=<text|file:path> --include=<files> [--param=value] [--go]"
+            exit 1
+                fi
+            ;;
+    esac
+        shift
+    done
+}
+
+# Parse parameters for plan task - extends repo task parameters with dual model/provider support
+parse_plan_task_parameters() {
+    local task_template="$1"
+    shift
+    
+    # Initialize all parsed values (repo task ones + plan-specific dual models)
+    PARSED_TEMPLATE_NAME=""
+    PARSED_PROMPT_CONTENT=""
+    PARSED_FILE_MODEL=""
+    PARSED_THINKING_MODEL=""
+    PARSED_FILE_PROVIDER=""
+    PARSED_THINKING_PROVIDER=""
+    PARSED_OUTPUT_FILE=""
+    PARSED_GO_FLAG=false
+    PARSED_PARAMS=()
+    PARSED_INCLUDES=()
+    PARSED_EXCLUDES=()
+    PARSED_QUESTION=""
+    
+    # Set template_name from TASK_TEMPLATE if available
+    if [[ -n "$task_template" ]]; then
+        print_info "Using template from task configuration: $task_template"
+        PARSED_TEMPLATE_NAME="$task_template"
+    fi
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --template=*)
+                PARSED_TEMPLATE_NAME="${1#*=}"
+                ;;
+            --prompt=*)
+                PARSED_PROMPT_CONTENT="${1#*=}"
+                ;;
+            --file-model=*)
+                PARSED_FILE_MODEL="${1#*=}"
+                ;;
+            --thinking-model=*)
+                PARSED_THINKING_MODEL="${1#*=}"
+                ;;
+            --file-provider=*)
+                PARSED_FILE_PROVIDER="${1#*=}"
+                ;;
+            --thinking-provider=*)
+                PARSED_THINKING_PROVIDER="${1#*=}"
+                ;;
+            --output-file=*)
+                PARSED_OUTPUT_FILE="${1#*=}"
+                # Remove surrounding quotes if present
+                if [[ $PARSED_OUTPUT_FILE == \"*\" ]]; then
+                    PARSED_OUTPUT_FILE="${PARSED_OUTPUT_FILE%\"}"
+                    PARSED_OUTPUT_FILE="${PARSED_OUTPUT_FILE#\"}"
+                fi
+                ;;
+            --include=*)
+                PARSED_INCLUDES+=("${1#*=}")
+                ;;
+            --exclude=*)
+                PARSED_EXCLUDES+=("${1#*=}")
+                ;;
+            --show-context)
+                show_context
+                exit 0
+                ;;
+            --go)
+                PARSED_GO_FLAG=true
+                ;;
+            --*=*)
+                # Collect custom parameters for template processing
+                PARSED_PARAMS+=("$1")
+                ;;
+            *)
+                # First non-flag is the question string if provided as bare arg
+                if [[ -z "$PARSED_QUESTION" ]]; then
+                    PARSED_QUESTION="$1"
+                else
+                print_error "Unknown parameter: $1"
+                    print_info "Usage: run-prompt.sh plan --prompt=<text|file:path> --include=<files> [--param=value] [--go]"
                 exit 1
+                fi
                 ;;
         esac
         shift
@@ -154,31 +322,146 @@ validate_task_inputs() {
     VALIDATED_PROVIDER="$provider"
 }
 
-# Find template file in runtime and repo locations
-find_template_file() {
+# Validate repo task inputs and apply config defaults (extends ask task validation)
+validate_repo_task_inputs() {
     local template_name="$1"
+    local prompt_content="$2"  # This maps to prompt_text in repo task
+    local model="$3"
+    local provider="$4"
+    local question="$5"
+    shift 5
+    local includes=("$@")
     
-    # Find template file in search paths (runtime first, then repo)
-    local template_path=""
-    local search_paths=(
-        "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name.txt"
-        "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name/template.txt"
-        "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name.txt"
-        "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
-    )
+    # Use the standard ask task validation for common logic
+    validate_task_inputs "$template_name" "$prompt_content" "$model" "$provider"
     
-    for path in "${search_paths[@]}"; do
-        if [[ -f "$path" ]]; then
-            template_path="$path"
-            break
+    # Use the validated model and provider from the ask validation
+    model="$VALIDATED_MODEL"
+    provider="$VALIDATED_PROVIDER"
+    
+    # Additional validation for repo task: handle prompt input conversion to question
+    if [[ -n "$prompt_content" ]]; then
+        if [[ "$prompt_content" == file:* ]]; then
+            local prompt_file="${prompt_content#file:}"
+            if [[ ! -f "$prompt_file" ]]; then
+                print_error "Prompt file not found: $prompt_file"
+                exit 1
+            fi
+            question=$(cat "$prompt_file")
+        else
+            question="$prompt_content"
         fi
-    done
+    fi
     
-    if [[ ! -f "$template_path" ]]; then
-        print_error "Template not found: $template_name"
+    # Validate that we have a question (either from prompt or template will be processed later)
+    if [[ -z "$question" && -z "$template_name" ]]; then
+        print_error "Question text is required (e.g., run-prompt.sh repo \"Explain...\") or use --template/--prompt"
         exit 1
     fi
     
+    # Repo-specific validation: context files are required
+    if [[ ${#includes[@]} -eq 0 ]]; then
+        print_error "Repository analysis requires context files. Use --include to specify files/folders to analyze."
+        print_info "Examples:"
+        print_info "  --include=README.md                 # Analyze just the README"
+        print_info "  --include=src                       # Analyze the src/ folder"
+        print_info "  --include=README.md --include=src   # Analyze README and src/"
+        exit 1
+    fi
+    
+    # Return validated values via global variables
+    VALIDATED_MODEL="$model"
+    VALIDATED_PROVIDER="$provider"
+    VALIDATED_QUESTION="$question"
+}
+
+# Validate plan task inputs and apply config defaults (extends repo task validation with dual models)
+validate_plan_task_inputs() {
+    local template_name="$1"
+    local prompt_content="$2"  # This maps to prompt_text in plan task
+    local file_model="$3"
+    local thinking_model="$4"
+    local file_provider="$5"
+    local thinking_provider="$6"
+    local question="$7"
+    shift 7
+    local includes=("$@")
+    
+    # Handle prompt input conversion to question (same as repo task)
+    if [[ -n "$prompt_content" ]]; then
+        if [[ "$prompt_content" == file:* ]]; then
+            local prompt_file="${prompt_content#file:}"
+            if [[ ! -f "$prompt_file" ]]; then
+                print_error "Prompt file not found: $prompt_file"
+                exit 1
+            fi
+            question=$(cat "$prompt_file")
+        else
+            question="$prompt_content"
+        fi
+    fi
+    
+    # Validate that we have a question (either from prompt or template will be processed later)
+    if [[ -z "$question" && -z "$template_name" ]]; then
+        print_error "Question text is required (e.g., run-prompt.sh plan \"Add auth...\") or use --template/--prompt"
+        exit 1
+    fi
+    
+    # Plan-specific validation: context files are required
+    if [[ ${#includes[@]} -eq 0 ]]; then
+        print_error "Planning requires context files. Use --include to specify files/folders to base the plan on."
+        print_info "Examples:"
+        print_info "  --include=README.md                 # Plan based on project overview"
+        print_info "  --include=src                       # Plan based on existing code"
+        print_info "  --include=README.md --include=src   # Plan with full context"
+        exit 1
+    fi
+    
+    # Return validated values via global variables
+    VALIDATED_FILE_MODEL="$file_model"
+    VALIDATED_THINKING_MODEL="$thinking_model"
+    VALIDATED_FILE_PROVIDER="$file_provider"
+    VALIDATED_THINKING_PROVIDER="$thinking_provider"
+    VALIDATED_QUESTION="$question"
+}
+
+# Find template file in runtime and repo locations
+find_template_file() {
+    local template_name="$1"
+    local extension="${2:-txt}"  # Default to .txt for ask tasks, can specify .md for repo tasks
+    
+    # Find template file in search paths (runtime first, then repo)
+        local template_path=""
+    local search_paths=()
+    
+    if [[ "$extension" == "txt" ]]; then
+        # Ask task template search paths
+        search_paths=(
+            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name.txt"
+            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name/template.txt"
+            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name.txt"
+            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
+        )
+    elif [[ "$extension" == "md" ]]; then
+        # Repo task template search paths
+        search_paths=(
+            "$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md"
+            "${SCRIPT_DIR}/../assets/templates/${template_name}.md"
+        )
+    fi
+        
+        for path in "${search_paths[@]}"; do
+            if [[ -f "$path" ]]; then
+                template_path="$path"
+                break
+            fi
+        done
+        
+        if [[ ! -f "$template_path" ]]; then
+            print_error "Template not found: $template_name"
+            exit 1
+        fi
+        
     # Return the found template path via global variable
     FOUND_TEMPLATE_PATH="$template_path"
 }
@@ -276,6 +559,60 @@ resolve_task_model() {
     RESOLVED_PROVIDER="$provider"
 }
 
+# Resolve dual models for plan task (file and thinking)
+resolve_plan_task_models() {
+    local file_model="$1"
+    local file_provider="$2"
+    local thinking_model="$3"
+    local thinking_provider="$4"
+    
+    # Default models if not specified
+    [[ -z "$file_model" ]] && file_model="gemini/gemini-2-0-flash"
+    [[ -z "$thinking_model" ]] && thinking_model="gemini/gemini-2-0-flash"
+    
+    # Convert bare model names to provider/model format for resolution
+    [[ "$file_model" != */* && -n "$file_provider" ]] && file_model="$file_provider/$file_model"
+    [[ "$file_model" != */* && -z "$file_provider" ]] && file_model="gemini/$file_model"
+    [[ "$thinking_model" != */* && -n "$thinking_provider" ]] && thinking_model="$thinking_provider/$thinking_model"
+    [[ "$thinking_model" != */* && -z "$thinking_provider" ]] && thinking_model="gemini/$thinking_model"
+    
+    # Resolve file model
+    if [[ "$file_model" == */* ]]; then
+        local resolved
+        if ! resolved=$(resolve_provider_model "$file_model"); then
+            # Fallback: pass through provider/model as-is
+            file_provider="${file_model%%/*}"
+            file_model="${file_model#*/}"
+            print_warning "File provider/model mapping not found. Using pass-through: provider='$file_provider' model='$file_model'"
+        else
+            file_provider="${resolved%%|*}"
+            file_model="${resolved#*|}"
+            print_info "Resolved file model $1 to provider='$file_provider' model='$file_model'"
+        fi
+    fi
+    
+    # Resolve thinking model
+    if [[ "$thinking_model" == */* ]]; then
+        local resolved2
+        if ! resolved2=$(resolve_provider_model "$thinking_model"); then
+            # Fallback: pass through provider/model as-is
+            thinking_provider="${thinking_model%%/*}"
+            thinking_model="${thinking_model#*/}"
+            print_warning "Thinking provider/model mapping not found. Using pass-through: provider='$thinking_provider' model='$thinking_model'"
+        else
+            thinking_provider="${resolved2%%|*}"
+            thinking_model="${resolved2#*|}"
+            print_info "Resolved thinking model $3 to provider='$thinking_provider' model='$thinking_model'"
+        fi
+    fi
+    
+    # Return resolved values via global variables
+    RESOLVED_FILE_MODEL="$file_model"
+    RESOLVED_FILE_PROVIDER="$file_provider"
+    RESOLVED_THINKING_MODEL="$thinking_model"
+    RESOLVED_THINKING_PROVIDER="$thinking_provider"
+}
+
 # Build vibe-tools command arguments and handle output file setup
 build_vibe_command_args() {
     local vibe_cmd="$1"
@@ -294,6 +631,58 @@ build_vibe_command_args() {
     
     # Add max-tokens if specified
     [[ -n "$max_tokens" ]] && vibe_args+=("--max-tokens=$max_tokens")
+    
+    # Add task-specific arguments
+    if [[ "$vibe_cmd" == "repo" ]]; then
+        vibe_args+=("--subdir=public")
+    elif [[ "$vibe_cmd" == "plan" ]]; then
+        vibe_args+=("--subdir=public")
+        # Plan task uses dual models via additional parameters passed after basic ones
+        # These will be added by the caller: --fileProvider, --thinkingProvider, --fileModel, --thinkingModel
+    fi
+    
+    # Handle output file - default to timestamped file in output directory
+    if [[ -n "$output_file" ]]; then
+        # Convert to absolute path if relative
+        if [[ "$output_file" != /* ]]; then
+            output_file="$(pwd)/$output_file"
+        fi
+        vibe_args+=("--save-to=$output_file")
+    else
+        # Default output to ~/.vibe-tools-square/output/ with timestamp
+        local timestamp=$(date +%Y-%m-%d_%H%M%S)
+        local task_type="$vibe_cmd"
+        if [[ -n "$template_name" && "$template_name" != "repo-prompt" ]]; then
+            task_type="${vibe_cmd}_${template_name}"
+        fi
+        local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_${task_type}.md"
+        ensure_output_directory
+        vibe_args+=("--save-to=$default_output")
+        output_file="$default_output"  # Set for later reference
+    fi
+    
+    # Return values via global variables
+    BUILT_VIBE_ARGS=("${vibe_args[@]}")
+    FINAL_OUTPUT_FILE="$output_file"
+}
+
+# Build vibe-tools plan command arguments (specialized for dual model system)
+build_plan_command_args() {
+    local file_model="$1"
+    local file_provider="$2"
+    local thinking_model="$3"
+    local thinking_provider="$4"
+    local output_file="$5"
+    
+    # Build plan-specific vibe-tools arguments
+    local vibe_args=()
+    vibe_args+=("--subdir=public")
+    
+    # Add dual model arguments
+    [[ -n "$file_provider" ]] && vibe_args+=("--fileProvider=$file_provider")
+    [[ -n "$thinking_provider" ]] && vibe_args+=("--thinkingProvider=$thinking_provider")
+    [[ -n "$file_model" ]] && vibe_args+=("--fileModel=$file_model")
+    [[ -n "$thinking_model" ]] && vibe_args+=("--thinkingModel=$thinking_model")
         
     # Handle output file - default to timestamped file in output directory
     if [[ -n "$output_file" ]]; then
@@ -305,19 +694,15 @@ build_vibe_command_args() {
     else
         # Default output to ~/.vibe-tools-square/output/ with timestamp
         local timestamp=$(date +%Y-%m-%d_%H%M%S)
-        local task_type="ask"
-        if [[ -n "$template_name" ]]; then
-            task_type="ask_${template_name}"
-        fi
-        local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_${task_type}.md"
+        local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_plan.md"
         ensure_output_directory
         vibe_args+=("--save-to=$default_output")
         output_file="$default_output"  # Set for later reference
     fi
     
     # Return values via global variables
-    BUILT_VIBE_ARGS=("${vibe_args[@]}")
-    FINAL_OUTPUT_FILE="$output_file"
+    BUILT_PLAN_ARGS=("${vibe_args[@]}")
+    FINAL_PLAN_OUTPUT_FILE="$output_file"
 }
 
 # Create comprehensive execution log
@@ -416,7 +801,7 @@ execute_vibe_command() {
     local vibe_args=("${BUILT_VIBE_ARGS[@]}")  # Use the global from build_vibe_command_args
     
     if $go_flag; then
-        print_step "Executing vibe-tools ask command from runtime content directory"
+        print_step "Executing $vibe_cmd command from runtime content directory"
         
         # Log the execution attempt
         echo "=== EXECUTION ATTEMPT ===" >> "$log_file"
@@ -498,8 +883,8 @@ execute_task() {
         print_error "Task '$task_name' not found in runtime ($VIBE_TOOLS_SQUARE_HOME/tasks/) or repo (assets/.vibe-tools-square/tasks/)"
         print_info "Available tasks:"
         list_available_tasks
-        exit 1
-    fi
+                    exit 1
+                fi
     
     # Source the task configuration
     source "$task_file"
@@ -556,7 +941,7 @@ execute_task() {
             print_info "Task '$TASK_NAME' loaded: $TASK_DESCRIPTION"
             print_info "Task type '$TASK_TYPE' not recognized"
             print_info "Supported task types: ask, repo, plan"
-            exit 1
+        exit 1
             ;;
     esac
 }
@@ -644,89 +1029,35 @@ execute_ask_task() {
 
 # Execute the repo task (adds ICE curation and runs from runtime)
 execute_repo_task() {
-    local template_name=""
-    local prompt_text=""
-    local model=""
-    local provider=""
-    local output_file=""
-    local go_flag=false
-    local max_tokens=""
-    local includes=()
-    local excludes=()
-    local question=""
+    # Parse parameters using helper function
+    parse_repo_task_parameters "${TASK_TEMPLATE:-}" "$@"
     
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --template=*) template_name="${1#*=}" ;;
-            --prompt=*) prompt_text="${1#*=}" ;;
-            --model=*) model="${1#*=}" ;;
-            --provider=*) provider="${1#*=}" ;;
-            --output-file=*) output_file="${1#*=}" ;;
-            --max-tokens=*) max_tokens="${1#*=}" ;;
-            --include=*) includes+=("${1#*=}") ;;
-            --exclude=*) excludes+=("${1#*=}") ;;
-            --show-context) show_context; exit 0 ;;
-            --go) go_flag=true ;;
-            *)
-                # First non-flag is the question string if provided as bare arg
-                if [[ -z "$question" ]]; then
-                    question="$1"
-                else
-                    print_error "Unknown parameter: $1"
-                    exit 1
-                fi
-                ;;
-        esac
-        shift
-    done
+    # Use parsed values (for readability, assign to local variables)
+    local template_name="$PARSED_TEMPLATE_NAME"
+    local prompt_text="$PARSED_PROMPT_CONTENT"
+    local model="$PARSED_MODEL"
+    local provider="$PARSED_PROVIDER"
+    local output_file="$PARSED_OUTPUT_FILE"
+    local go_flag="$PARSED_GO_FLAG"
+    local max_tokens="$PARSED_MAX_TOKENS"
+    local params=("${PARSED_PARAMS[@]+"${PARSED_PARAMS[@]}"}")
+    local includes=("${PARSED_INCLUDES[@]+"${PARSED_INCLUDES[@]}"}")
+    local excludes=("${PARSED_EXCLUDES[@]+"${PARSED_EXCLUDES[@]}"}")
+    local question="$PARSED_QUESTION"
     
-    # Check for mutual exclusivity between template and prompt
-    if [[ -n "$template_name" && -n "$prompt_text" ]]; then
-        print_error "Cannot use both --template and --prompt flags. Use one or the other."
-        exit 1
-    fi
+    # Validate inputs and apply task config defaults using helper function
+    validate_repo_task_inputs "$template_name" "$prompt_text" "$model" "$provider" "$question" "${includes[@]+"${includes[@]}"}"
     
-    # Handle prompt input (direct text or file: prefix)
-    if [[ -n "$prompt_text" ]]; then
-        if [[ "$prompt_text" == file:* ]]; then
-            local prompt_file="${prompt_text#file:}"
-            if [[ ! -f "$prompt_file" ]]; then
-                print_error "Prompt file not found: $prompt_file"
-                exit 1
-            fi
-            question=$(cat "$prompt_file")
-        else
-            question="$prompt_text"
-        fi
-    fi
-    
-    if [[ -z "$question" && -z "$template_name" ]]; then
-        print_error "Question text is required (e.g., run-prompt.sh repo \"Explain...\") or use --template/--prompt"
-        exit 1
-    fi
-    
-    # Validate that context files are provided for repo analysis
-    if [[ ${#includes[@]} -eq 0 ]]; then
-        print_error "Repository analysis requires context files. Use --include to specify files/folders to analyze."
-        print_info "Examples:"
-        print_info "  --include=README.md                 # Analyze just the README"
-        print_info "  --include=src                       # Analyze the src/ folder"
-        print_info "  --include=README.md --include=src   # Analyze README and src/"
-        exit 1
-    fi
+    # Use validated values
+    model="$VALIDATED_MODEL"
+    provider="$VALIDATED_PROVIDER"
+    question="$VALIDATED_QUESTION"
     
     # Handle template processing if template is specified
     if [[ -n "$template_name" ]]; then
-        # Look for template in runtime environment first, then repo assets
-        local template_file=""
-        if [[ -f "$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md" ]]; then
-            template_file="$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md"
-        elif [[ -f "${SCRIPT_DIR}/../assets/templates/${template_name}.md" ]]; then
-            template_file="${SCRIPT_DIR}/../assets/templates/${template_name}.md"
-        else
-            print_error "Template '$template_name' not found"
-            exit 1
-        fi
+        # Find template file using helper function (with .md extension for repo tasks)
+        find_template_file "$template_name" "md"
+        local template_file="$FOUND_TEMPLATE_PATH"
         
         # Load and process template
         question=$(cat "$template_file")
@@ -740,182 +1071,89 @@ execute_repo_task() {
     
     print_info "Execute mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
     
-    # Provider/model resolution
-    if [[ "$model" == */* ]]; then
-        local resolved
-        if ! resolved=$(resolve_provider_model "$model"); then
-            # Fallback: pass through provider/model as-is
-            provider="${model%%/*}"
-            model="${model#*/}"
-            print_warning "Provider/model mapping not found. Using pass-through: provider='$provider' model='$model'"
-        else
-            provider="${resolved%%|*}"
-            model="${resolved#*|}"
-        fi
-    fi
+    # Resolve provider and model using helper function
+    resolve_task_model "$model" "$provider"
+    model="$RESOLVED_MODEL"
+    provider="$RESOLVED_PROVIDER"
     
     # Prepare ICE using include/exclude
     init_context
     prepare_ice "${includes[@]/#/--include=}" "${excludes[@]/#/--exclude=}"
     
-    # Build command
-    local vibe_cmd="vibe-tools repo"
-    local vibe_args=("$question")
-    vibe_args+=("--subdir=public")
-    vibe_args+=("--save-to=$(default_output_path repo)")
-    [[ -n "$provider" ]] && vibe_args+=("--provider=$provider")
-    [[ -n "$model" ]] && vibe_args+=("--model=$model")
-    [[ -n "$max_tokens" ]] && vibe_args+=("--max-tokens=$max_tokens")
+    # Build vibe-tools command using helper function
+    build_vibe_command_args "repo" "$model" "$provider" "$max_tokens" "$go_flag" "$output_file" "repo-prompt"
     
-    # Replace save-to if user specified output_file
-    if [[ -n "$output_file" ]]; then
-        local abs
-        abs=$(absolute_path "$output_file")
-        for i in "${!vibe_args[@]}"; do
-            [[ "${vibe_args[$i]}" == --save-to=* ]] && vibe_args[$i]="--save-to=$abs"
-        done
-    fi
+    # Create comprehensive execution log using helper function
+    create_execution_log "repo-prompt" "prompt: $question" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$question" "vibe-tools repo" "${params[@]+"${params[@]}"}"
     
-    # Log + dry run / execute
-    run_vibe_command_from_runtime "$vibe_cmd" vibe_args $go_flag "repo"
+    # Execute command using helper function
+    execute_vibe_command "$go_flag" "$question" "vibe-tools repo" "$output_file" "$EXECUTION_LOG_FILE"
 }
 
 # Execute the plan task (supports separate file/thinking models)
 execute_plan_task() {
-    local question=""
-    local template_name=""
-    local prompt_text=""
-    local file_model=""
-    local thinking_model=""
-    local file_provider=""
-    local thinking_provider=""
-    local output_file=""
-    local go_flag=false
-    local includes=()
-    local excludes=()
+    # Parse parameters using helper function
+    parse_plan_task_parameters "${TASK_TEMPLATE:-}" "$@"
     
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --template=*) template_name="${1#*=}" ;;
-            --prompt=*) prompt_text="${1#*=}" ;;
-            --file-model=*) file_model="${1#*=}" ;;
-            --thinking-model=*) thinking_model="${1#*=}" ;;
-            --file-provider=*) file_provider="${1#*=}" ;;
-            --thinking-provider=*) thinking_provider="${1#*=}" ;;
-            --output-file=*) output_file="${1#*=}" ;;
-            --include=*) includes+=("${1#*=}") ;;
-            --exclude=*) excludes+=("${1#*=}") ;;
-            --show-context) show_context; exit 0 ;;
-            --go) go_flag=true ;;
-            *)
-                if [[ -z "$question" ]]; then
-                    question="$1"
-                else
-                    print_error "Unknown parameter: $1"
-                    exit 1
-                fi
-                ;;
-        esac
-        shift
-    done
+    # Use parsed values (for readability, assign to local variables)
+    local template_name="$PARSED_TEMPLATE_NAME"
+    local prompt_text="$PARSED_PROMPT_CONTENT"
+    local file_model="$PARSED_FILE_MODEL"
+    local thinking_model="$PARSED_THINKING_MODEL"
+    local file_provider="$PARSED_FILE_PROVIDER"
+    local thinking_provider="$PARSED_THINKING_PROVIDER"
+    local output_file="$PARSED_OUTPUT_FILE"
+    local go_flag="$PARSED_GO_FLAG"
+    local params=("${PARSED_PARAMS[@]+"${PARSED_PARAMS[@]}"}")
+    local includes=("${PARSED_INCLUDES[@]+"${PARSED_INCLUDES[@]}"}")
+    local excludes=("${PARSED_EXCLUDES[@]+"${PARSED_EXCLUDES[@]}"}")
+    local question="$PARSED_QUESTION"
     
-    # Check for mutual exclusivity between template and prompt
-    if [[ -n "$template_name" && -n "$prompt_text" ]]; then
-        print_error "Cannot use both --template and --prompt flags. Use one or the other."
-        exit 1
-    fi
+    # Validate inputs and apply task config defaults using helper function
+    validate_plan_task_inputs "$template_name" "$prompt_text" "$file_model" "$thinking_model" "$file_provider" "$thinking_provider" "$question" "${includes[@]+"${includes[@]}"}"
     
-    # Handle prompt input (direct text or file: prefix)
-    if [[ -n "$prompt_text" ]]; then
-        if [[ "$prompt_text" == file:* ]]; then
-            local prompt_file="${prompt_text#file:}"
-            if [[ ! -f "$prompt_file" ]]; then
-                print_error "Prompt file not found: $prompt_file"
-                exit 1
-            fi
-            question=$(cat "$prompt_file")
-        else
-            question="$prompt_text"
-        fi
-    fi
-    
-    if [[ -z "$question" && -z "$template_name" ]]; then
-        print_error "Question text is required (e.g., run-prompt.sh plan \"Add auth...\") or use --template/--prompt"
-        exit 1
-    fi
-    
-    # Validate that context files are provided for planning
-    if [[ ${#includes[@]} -eq 0 ]]; then
-        print_error "Planning requires context files. Use --include to specify files/folders to base the plan on."
-        print_info "Examples:"
-        print_info "  --include=README.md                 # Plan based on project overview"
-        print_info "  --include=src                       # Plan based on existing code"
-        print_info "  --include=README.md --include=src   # Plan with full context"
-        exit 1
-    fi
+    # Use validated values
+    file_model="$VALIDATED_FILE_MODEL"
+    thinking_model="$VALIDATED_THINKING_MODEL"
+    file_provider="$VALIDATED_FILE_PROVIDER"
+    thinking_provider="$VALIDATED_THINKING_PROVIDER"
+    question="$VALIDATED_QUESTION"
     
     # Handle template processing if template is specified
     if [[ -n "$template_name" ]]; then
-        # Look for template in runtime environment first, then repo assets
-        local template_file=""
-        if [[ -f "$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md" ]]; then
-            template_file="$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md"
-        elif [[ -f "${SCRIPT_DIR}/../assets/templates/${template_name}.md" ]]; then
-            template_file="${SCRIPT_DIR}/../assets/templates/${template_name}.md"
-        else
-            print_error "Template '$template_name' not found"
-            exit 1
-        fi
+        # Find template file using helper function (with .md extension for plan tasks)
+        find_template_file "$template_name" "md"
+        local template_file="$FOUND_TEMPLATE_PATH"
         
         # Load and process template
         question=$(cat "$template_file")
         question=$(process_placeholders "$question")
     fi
-    # Default to free Gemini for testing if not specified
-    if [[ -z "$file_model" ]]; then file_model="gemini/gemini-2-0-flash"; fi
-    if [[ -z "$thinking_model" ]]; then thinking_model="gemini/gemini-2-0-flash"; fi
     
-    # Resolve models
-    if [[ "$file_model" == */* ]]; then
-        local resolved
-        if ! resolved=$(resolve_provider_model "$file_model"); then
-            file_provider="${file_model%%/*}"; file_model="${file_model#*/}"
-            print_warning "File provider/model mapping not found. Using pass-through: provider='$file_provider' model='$file_model'"
-        else
-            file_provider="${resolved%%|*}"; file_model="${resolved#*|}"
-        fi
-    fi
-    if [[ "$thinking_model" == */* ]]; then
-        local resolved2
-        if ! resolved2=$(resolve_provider_model "$thinking_model"); then
-            thinking_provider="${thinking_model%%/*}"; thinking_model="${thinking_model#*/}"
-            print_warning "Thinking provider/model mapping not found. Using pass-through: provider='$thinking_provider' model='$thinking_model'"
-        else
-            thinking_provider="${resolved2%%|*}"; thinking_model="${resolved2#*|}"
-        fi
-    fi
+    print_info "Execute mode: $(if $go_flag; then echo "EXECUTE"; else echo "DRY RUN"; fi)"
     
+    # Resolve dual models using helper function
+    resolve_plan_task_models "$file_model" "$file_provider" "$thinking_model" "$thinking_provider"
+    file_model="$RESOLVED_FILE_MODEL"
+    file_provider="$RESOLVED_FILE_PROVIDER"
+    thinking_model="$RESOLVED_THINKING_MODEL"
+    thinking_provider="$RESOLVED_THINKING_PROVIDER"
+    
+    # Prepare ICE using include/exclude
     init_context
     prepare_ice "${includes[@]/#/--include=}" "${excludes[@]/#/--exclude=}"
     
-    local vibe_cmd="vibe-tools plan"
-    local vibe_args=("$question")
-    vibe_args+=("--subdir=public")
-    vibe_args+=("--save-to=$(default_output_path plan)")
-    [[ -n "$file_provider" ]] && vibe_args+=("--fileProvider=$file_provider")
-    [[ -n "$thinking_provider" ]] && vibe_args+=("--thinkingProvider=$thinking_provider")
-    [[ -n "$file_model" ]] && vibe_args+=("--fileModel=$file_model")
-    [[ -n "$thinking_model" ]] && vibe_args+=("--thinkingModel=$thinking_model")
+    # Build vibe-tools plan command using helper function
+    build_plan_command_args "$file_model" "$file_provider" "$thinking_model" "$thinking_provider" "$output_file"
     
-    if [[ -n "$output_file" ]]; then
-        local abs
-        abs=$(absolute_path "$output_file")
-        for i in "${!vibe_args[@]}"; do
-            [[ "${vibe_args[$i]}" == --save-to=* ]] && vibe_args[$i]="--save-to=$abs"
-        done
-    fi
+    # Set BUILT_VIBE_ARGS for create_execution_log compatibility
+    BUILT_VIBE_ARGS=("${BUILT_PLAN_ARGS[@]}")
     
-    run_vibe_command_from_runtime "$vibe_cmd" vibe_args $go_flag "plan"
+    # Create comprehensive execution log using helper function
+    create_execution_log "plan-prompt" "prompt: $question" "$file_model" "$file_provider" "" "$output_file" "$go_flag" "$question" "vibe-tools plan" "${params[@]+"${params[@]}"}"
+    
+    # Execute command using helper function
+    execute_vibe_command "$go_flag" "$question" "vibe-tools plan" "$FINAL_PLAN_OUTPUT_FILE" "$EXECUTION_LOG_FILE"
 }
 
 # Helpers used by repo/plan
