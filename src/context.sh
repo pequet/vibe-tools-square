@@ -40,6 +40,33 @@ prepare_ice() {
         shift
     done
     
+    # DEBUG: Show parsed include/exclude arrays
+    print_info "CONTEXT DEBUG: Parsed parameters:"
+    print_info "  Include patterns (${#include_arr[@]}): ${include_arr[*]:-[none]}"
+    print_info "  Exclude patterns (${#exclude_arr[@]}): ${exclude_arr[*]:-[none]}"
+    
+    # DEBUG: Show what exists in source directory for each include pattern
+    print_info "CONTEXT DEBUG: Checking source directory for include patterns:"
+    for p in "${include_arr[@]}"; do
+        [[ -z "$p" ]] && continue
+        # Show comma-delimited items separately  
+        IFS=',' read -ra include_items <<< "$p"
+        for item in "${include_items[@]}"; do
+            item=$(echo "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [[ -z "$item" ]] && continue
+            if [[ -e "$source_dir/$item" ]]; then
+                if [[ -d "$source_dir/$item" ]]; then
+                    local dir_count=$(find "$source_dir/$item" -type f 2>/dev/null | wc -l | tr -d ' ')
+                    print_info "  $item/ -> DIRECTORY (contains $dir_count files)"
+                else
+                    print_info "  $item -> FILE (exists)"
+                fi
+            else
+                print_info "  $item -> NOT FOUND"
+            fi
+        done
+    done
+    
     # Clean target public directory (preserve config files at ICE root)
     clean_ice_public "$target_public"
     
@@ -55,42 +82,78 @@ prepare_ice() {
         # Build exclude filters FIRST (rsync processes in order)
         for p in "${exclude_arr[@]}"; do
             [[ -z "$p" ]] && continue
-            # If it's a directory, exclude everything inside it
-            if [[ -d "$source_dir/$p" ]]; then
-                filters+=("--exclude=$p/***")
-            else
-                # It's a file, exclude it exactly
-                filters+=("--exclude=$p")
-            fi
+            # Split comma-delimited patterns into separate filters
+            IFS=',' read -ra exclude_items <<< "$p"
+            for item in "${exclude_items[@]}"; do
+                # Trim whitespace
+                item=$(echo "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                [[ -z "$item" ]] && continue
+                # If it's a directory, exclude everything inside it
+                if [[ -d "$source_dir/$item" ]]; then
+                    filters+=("--exclude=$item/***")
+                else
+                    # It's a file, exclude it exactly
+                    filters+=("--exclude=$item")
+                fi
+            done
         done
         
         # Build include filters AFTER excludes
         local p
         for p in "${include_arr[@]}"; do
             [[ -z "$p" ]] && continue
-            # If it's a directory, include everything inside it recursively
-            if [[ -d "$source_dir/$p" ]]; then
-                filters+=("--include=$p/***")
-            else
-                # It's a file, include it exactly
-                filters+=("--include=$p")
-            fi
+            # Split comma-delimited patterns into separate filters
+            IFS=',' read -ra include_items <<< "$p"
+            for item in "${include_items[@]}"; do
+                # Trim whitespace
+                item=$(echo "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                [[ -z "$item" ]] && continue
+                # If it's a directory, include everything inside it recursively
+                if [[ -d "$source_dir/$item" ]]; then
+                    filters+=("--include=$item/***")
+                else
+                    # It's a file, include it exactly from root (add leading slash for precise matching)
+                    if [[ "$item" != /* ]]; then
+                        filters+=("--include=/$item")
+                    else
+                        filters+=("--include=$item")
+                    fi
+                fi
+            done
         done
         filters+=("--exclude=*")
+        
+        # DEBUG: Always show rsync filters being applied
+        print_info "CONTEXT DEBUG: Built rsync filters (${#filters[@]} total):"
+        for f in "${filters[@]}"; do
+            print_info "  $f"
+        done
+        
+        # DEBUG: Show the full rsync command
+        print_info "CONTEXT DEBUG: Executing rsync command:"
+        print_info "  rsync ${rsync_opts[*]} [${#filters[@]} filters] $source_dir/ $target_public/"
+        
         print_info "Syncing curated context to ICE public via rsync filters"
-        # Debug: show filters being applied
-        if [[ -n "${VIBE_TOOLS_DEBUG:-}" ]]; then
-            print_info "Applied rsync filters:"
-            for f in "${filters[@]}"; do
-                print_info "  $f"
-            done
-        fi
         rsync "${rsync_opts[@]}" "${filters[@]}" "$source_dir/" "$target_public/"
         print_info "Context sync complete"
-        # Post-sync summary: show file count only
+        
+        # DEBUG: Show detailed files that were actually copied
         if command -v find >/dev/null 2>&1; then
             local count
             count=$(find "$target_public" -type f | wc -l | tr -d ' ')
+            print_info "CONTEXT DEBUG: Files actually copied to ICE public ($count total):"
+            if [[ $count -gt 0 ]]; then
+                find "$target_public" -type f | while read -r file; do
+                    local relative_path="${file#$target_public/}"
+                    local size=""
+                    if command -v du >/dev/null 2>&1; then
+                        size=" ($(du -h "$file" | cut -f1))"
+                    fi
+                    print_info "  $relative_path$size"
+                done
+            else
+                print_info "  [no files copied]"
+            fi
             print_info "Curated files copied: $count"
         fi
     fi

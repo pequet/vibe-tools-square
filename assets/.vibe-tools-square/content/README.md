@@ -12,9 +12,16 @@ When running `repo` or `plan` commands, the system:
 
 ## Subdirectories
 
-- `public/` - Public content area for curated files
-- `node_modules/` - Local vibe-tools installation
+- `public/` - Public content area for curated files (ONLY files here are included in repomix processing)
 - `vibe-tools.config.json` - Vibe-tools configuration for this context
+
+## Repomix Configuration
+
+This directory includes:
+- `repomix.config.json` - Configured to only include files from the `public/` subdirectory
+- `.repomixignore` - Excludes everything except the `public/` directory
+
+This ensures that when vibe-tools processes this context, only the specifically curated files are included in the analysis, providing precise token control and context isolation.
 
 ## Usage
 

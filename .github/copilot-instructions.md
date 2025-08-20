@@ -9,6 +9,8 @@ globs: *
 
 ## PROJECT DOCUMENTATION & CONTEXT SYSTEM
 
+*   The AI assistant must follow the template in development-log.md exactly including bullet points, field names, and placement under the "Log Entries" section.
+
 ## CODING STANDARDS
 
 *   All files in `#file:src` must follow Tier 3 attribution:
@@ -29,6 +31,7 @@ globs: *
 
 *   **CRITICAL:** When refactoring code, especially core utilities or shared scripts, make changes incrementally, one change at a time, with thorough testing after each change to avoid breaking existing functionality. This is particularly important for functions like `execute_ask_task`, `execute_repo_task`, and `execute_plan_task` in `core.sh`.
 *   **CRITICAL:** During refactoring, pay close attention to parameter handling between `run-prompt.sh`, task configuration files, and templates. Ensure command-line arguments are correctly processed to replace placeholders in configuration files, and that the final parameters are passed correctly to the `vibe-tools` command.
+*   **CRITICAL:** The `update` command in `install.sh` must NOT install `vibe-tools`. It should only update the runtime environment.
 
 ## REFERENCES
 
@@ -171,3 +174,10 @@ globs: *
 *   Use shared functions for execution result handling in all three functions.
 *   Messaging utilities should be used for logging in all three functions, converting existing logging as needed.
 *   Be extraordinarily careful not to break any existing functionality during refactoring.
+
+### Configuration Files
+
+*   The system should support `repomix.config.json` and `.repomixignore` files. These files, when placed in the `assets/.vibe-tools-square` directory, should be copied to the runtime environment on install and update, using `#file:install.sh`.
+*   `repomix.config.json`: Configures included files from `public/**/*`, excludes common development artifacts (.DS_Store, node_modules, logs, etc.), and sets reasonable output limits (10MB max file size, 20 top files).
+*   `.repomixignore`: Uses exclude-all pattern (`*`) then includes only the `public/` directory as a backup exclusion method.
+*   When copying configuration files during install and update, the script must copy `providers.conf` from assets to runtime as `providers.conf`. There must be no renaming or modification of the filename.

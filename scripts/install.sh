@@ -103,6 +103,8 @@ verify_source_files() {
         "$PROJECT_ROOT/src/utils/template_utils.sh"
         "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf"
         "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json"
+        "$PROJECT_ROOT/assets/.vibe-tools-square/content/repomix.config.json"
+        "$PROJECT_ROOT/assets/.vibe-tools-square/content/.repomixignore"
     )
     
     for file in "${required_files[@]}"; do
@@ -173,22 +175,41 @@ setup_content_directory() {
         exit 1
     fi
     
-    # Install vibe-tools in the content directory
-    print_step "Installing vibe-tools in content directory..."
-    if command -v vibe-tools >/dev/null 2>&1; then
-        cd "$RUNTIME_HOME/content"
-        if ! vibe-tools install . >/dev/null 2>&1; then
-            print_error "Failed to install vibe-tools in content directory"
-            print_error "Make sure vibe-tools is installed globally and working"
+    # Copy repomix configuration files for content directory
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/content/repomix.config.json" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/content/repomix.config.json" "$RUNTIME_HOME/content/"
+        print_info "Copied repomix.config.json for content directory"
+    else
+        print_warning "repomix.config.json not found in assets for content directory"
+    fi
+    
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/content/.repomixignore" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/content/.repomixignore" "$RUNTIME_HOME/content/"
+        print_info "Copied .repomixignore for content directory"
+    else
+        print_warning ".repomixignore not found in assets for content directory"
+    fi
+    
+    # Install vibe-tools in the content directory (fresh install only)
+    if [[ "$UPDATE_MODE" == true ]]; then
+        print_info "Skipping vibe-tools installation (update mode)"
+    else
+        print_step "Installing vibe-tools in content directory..."
+        if command -v vibe-tools >/dev/null 2>&1; then
+            cd "$RUNTIME_HOME/content"
+            if ! vibe-tools install . >/dev/null 2>&1; then
+                print_error "Failed to install vibe-tools in content directory"
+                print_error "Make sure vibe-tools is installed globally and working"
+                cd - >/dev/null
+                exit 1
+            fi
             cd - >/dev/null
+            print_success "vibe-tools installed in content directory"
+        else
+            print_error "vibe-tools command not found"
+            print_error "Please install vibe-tools globally first: npm install -g vibe-tools"
             exit 1
         fi
-        cd - >/dev/null
-        print_success "vibe-tools installed in content directory"
-    else
-        print_error "vibe-tools command not found"
-        print_error "Please install vibe-tools globally first: npm install -g vibe-tools"
-        exit 1
     fi
     
     print_success "Isolated Context Environment setup complete"
@@ -196,19 +217,22 @@ setup_content_directory() {
 
 install_configuration() {
     print_step "Setting up configuration structure..."
+
+    # Copy essential configuration files
+    print_info ".conf files will be discovered dynamically from assets (runtime precedence)"
+
+    # # Copy default.conf from assets
+    # if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf" "$RUNTIME_HOME/config/"; then
+    #     print_error "Failed to copy default.conf"
+    #     exit 1
+    # fi
     
-    # Copy essential configuration files from assets
-    if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf" "$RUNTIME_HOME/config/"; then
-        print_error "Failed to copy default.conf"
-        exit 1
-    fi
-    
-    # Copy providers.conf.example, user creates their own providers.conf
-    if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/providers.conf.example" "$RUNTIME_HOME/config/"; then
-        print_error "Failed to copy providers.conf.example"
-        exit 1
-    fi
-    
+    # # Copy providers.conf from assets
+    # if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/providers.conf" "$RUNTIME_HOME/config/"; then
+    #     print_error "Failed to copy providers.conf"
+    #     exit 1
+    # fi
+
     # Create task directory structure with README only (dynamic discovery handles assets)
     print_step "Creating task directory structure..."
     mkdir -p "$RUNTIME_HOME/tasks"
