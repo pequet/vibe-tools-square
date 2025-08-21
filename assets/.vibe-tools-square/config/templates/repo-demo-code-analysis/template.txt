@@ -1,0 +1,115 @@
+# 🔍 REPO DEMO: CODE QUALITY ASSESSMENT REPORT
+## Generated: {{TODAY_DATE}} at {{TODAY_DATETIME}}
+
+## 📊 ANALYSIS OVERVIEW
+
+This report provides an assessment of code quality based on industry standards and best practices. The analysis focuses on **{{FOCUS}}** principles and follows **{{PRINCIPLES}}** methodologies.
+
+---
+
+## 🧰 PROJECT TECH STACK
+
+### Primary Language
+- {{LANGUAGE}}
+
+### Frameworks & Libraries
+<FRAMEWORKS>
+{{FRAMEWORKS}}
+</FRAMEWORKS>
+
+### Coding Standards
+<STANDARDS>
+{{STANDARDS}}
+</STANDARDS>
+
+### Architecture Pattern
+The codebase follows the **{{ARCHITECTURE}}** architectural pattern.
+
+---
+
+## 📋 CODE QUALITY ASSESSMENT
+
+### ✅ Strengths
+Based on the repository analysis, here are the identified strengths:
+
+1. **Architecture Adherence**
+2. **Documentation Quality**
+3. **Testing Practices**
+4. **Performance Optimization**
+5. **Security Considerations**
+
+### ⚠️ Improvement Areas
+Here are areas where the code could be improved:
+
+1. **Code Organization**
+2. **Error Handling**
+3. **Dependency Management**
+4. **Naming Conventions**
+5. **Code Duplication**
+
+---
+
+## 🔬 DETAILED FINDINGS
+
+### 1. Code Organization
+Analysis of the repository structure and code organization.
+
+### 2. Adherence to {{PRINCIPLES}}
+Evaluation of how well the codebase follows {{PRINCIPLES}} principles.
+
+### 3. {{LANGUAGE}} Best Practices
+Assessment of adherence to {{LANGUAGE}} best practices and idioms.
+
+### 4. Error Handling & Edge Cases
+Review of error handling strategies and edge case management.
+
+### 5. Performance Considerations
+Analysis of performance bottlenecks and optimization opportunities.
+
+### 6. Security Analysis
+Identification of potential security vulnerabilities and risks.
+
+---
+
+## 📈 QUALITY METRICS
+
+| Metric | Score | Industry Standard | Notes |
+|--------|-------|------------------|-------|
+| Code Coverage | - | >80% | - |
+| Complexity | - | Low-Medium | - |
+| Documentation | - | Comprehensive | - |
+| Maintainability | - | High | - |
+| Technical Debt | - | Low | - |
+
+---
+
+## 🚀 RECOMMENDATIONS
+
+Based on the analysis, here are actionable recommendations to improve code quality:
+
+1. **Short-term Wins**
+   - Quick improvements that can be implemented immediately
+
+2. **Medium-term Improvements**
+   - Refactoring opportunities that require moderate effort
+
+3. **Long-term Initiatives**
+   - Strategic improvements for long-term code health
+
+---
+
+## 📝 CONCLUSION
+
+This report was generated using the repo-demo-code-analysis template from the Ask-Plan-Repo Demo Series. It provides an assessment based on the specified focus areas and principles.
+
+**Try different parameters:**
+```bash
+# Get a different focus for code quality analysis:
+./run-prompt.sh repo-demo --focus="security vulnerabilities" --principles="OWASP Top 10" --language="TypeScript"
+
+# Or try the other templates in this series:
+./run-prompt.sh ask-demo  # For project briefing
+./run-prompt.sh plan-demo # For feature implementation planning
+```
+
+_Remember: Code quality is a journey, not a destination!_ 🚀

@@ -1,0 +1,164 @@
+# 📋 PLAN DEMO: FEATURE IMPLEMENTATION BLUEPRINT
+## {{FEATURE_NAME}} | Generated on {{TODAY_DATE}}
+
+> "Plans are worthless, but planning is everything." - Dwight D. Eisenhower
+
+## 🎯 FEATURE OVERVIEW
+
+**Feature Name:** {{FEATURE_NAME}}  
+**Complexity:** {{COMPLEXITY}}  
+**Priority:** {{PRIORITY}}  
+**Timeline:** {{TIMELINE}}  
+**Team Size:** {{TEAM_SIZE}}  
+**Target Audience:** {{TARGET_AUDIENCE}}  
+
+## 📝 REQUIREMENTS
+
+<REQUIREMENTS>
+{{REQUIREMENTS}}
+</REQUIREMENTS>
+
+## 🏗️ ARCHITECTURE CONSIDERATIONS
+
+<ARCHITECTURE>
+{{ARCHITECTURE}}
+</ARCHITECTURE>
+
+## 🧩 TECHNICAL DEPENDENCIES
+
+The implementation will leverage the following technologies and frameworks:
+- {{DEPENDENCIES}}
+
+## 🚀 IMPLEMENTATION APPROACH
+
+### 1. Discovery Phase (10% of timeline)
+- [ ] Review existing codebase and identify integration points
+- [ ] Analyze potential technical challenges
+- [ ] Define technical boundaries and interfaces
+- [ ] Create detailed technical specification
+
+### 2. Setup & Foundation (15% of timeline)
+- [ ] Set up development environment
+- [ ] Create branch strategy for collaborative development
+- [ ] Scaffold necessary files and components
+- [ ] Set up testing framework for the feature
+
+### 3. Core Implementation (40% of timeline)
+- [ ] Implement data models and persistence layer
+- [ ] Develop business logic and service layer
+- [ ] Create necessary APIs and endpoints
+- [ ] Implement frontend components and user interactions
+- [ ] Integrate with dependent systems
+
+### 4. Testing & Refinement (25% of timeline)
+- [ ] Write unit tests for all components
+- [ ] Perform integration testing
+- [ ] Conduct performance testing
+- [ ] Address edge cases and error handling
+- [ ] Optimize for performance and scalability
+
+### 5. Finalization (10% of timeline)
+- [ ] Documentation updates
+- [ ] Code review and cleanup
+- [ ] Final QA testing
+- [ ] Prepare for deployment
+- [ ] Create rollback plan
+
+## 🧠 TECHNICAL CONSIDERATIONS
+
+### Potential Challenges
+1. **Integration Complexity**: How the feature integrates with existing systems
+2. **Performance Implications**: Impact on system performance
+3. **Scalability Concerns**: How the feature will scale with increasing load
+4. **Security Considerations**: Potential security implications
+5. **Backward Compatibility**: Ensuring compatibility with existing features
+
+### Technical Decisions
+1. **Data Storage**: Where and how data will be stored
+2. **API Design**: Design principles for any new APIs
+3. **Authentication/Authorization**: Security requirements
+4. **Caching Strategy**: Approach to caching for performance
+5. **Error Handling**: Strategy for handling exceptions and errors
+
+## 📊 RESOURCE ALLOCATION
+
+| Phase | Developer Allocation | Timeline Portion |
+|-------|---------------------|------------------|
+| Discovery | 1 developer | {{TIMELINE}} × 0.1 |
+| Setup & Foundation | 1-2 developers | {{TIMELINE}} × 0.15 |
+| Core Implementation | All {{TEAM_SIZE}} | {{TIMELINE}} × 0.4 |
+| Testing & Refinement | All {{TEAM_SIZE}} | {{TIMELINE}} × 0.25 |
+| Finalization | 1-2 developers | {{TIMELINE}} × 0.1 |
+
+## 🛠️ IMPLEMENTATION DETAILS
+
+### File Changes
+The following files will need to be created or modified:
+
+1. **New Files**
+   - Models/data structures
+   - Service layer components
+   - UI components
+   - Test files
+
+2. **Modified Files**
+   - Configuration files
+   - Existing services that need integration
+   - Documentation files
+
+### Database Changes
+Required database schema modifications:
+
+1. **New Tables/Collections**
+   - Details of new data structures
+
+2. **Modified Tables/Collections**
+   - Changes to existing data structures
+
+## ⏱️ TIMELINE & MILESTONES
+
+| Milestone | Description | Target Date |
+|-----------|-------------|-------------|
+| Architecture Finalized | Complete technical design | Week 1 |
+| Core Implementation | Basic functionality working | Week 2 |
+| Feature Complete | All functionality implemented | Week 3 |
+| Testing Complete | All tests passing | Week 4 |
+| Release Ready | Ready for production | End of {{TIMELINE}} |
+
+## 📈 METRICS & SUCCESS CRITERIA
+
+How we'll measure success:
+
+1. **Functional Criteria**
+   - Feature works as specified in all test cases
+   - Zero high-priority bugs
+
+2. **Performance Criteria**
+   - Response time under threshold
+   - Resource utilization within acceptable limits
+
+3. **User Experience Criteria**
+   - Positive feedback from user testing
+   - Meets accessibility standards
+
+## 🌟 BONUS: IMPLEMENTATION TIPS
+
+* Break down large tasks into smaller, manageable chunks
+* Commit code frequently with descriptive commit messages
+* Document design decisions and trade-offs
+* Consider creating a feature flag for gradual rollout
+* Don't forget to write tests for edge cases!
+
+---
+
+*This implementation plan was generated using the plan-demo-feature-planning template from the Ask-Plan-Repo Demo Series. Use it as a starting point and adapt as needed for your specific project context.*
+
+*Try other demos in this series:*
+```bash
+# Try different parameters for this template:
+./run-prompt.sh plan-demo --feature-name="Payment Processing" --complexity="High" --priority="Critical"
+
+# Or try the other templates in this series:
+./run-prompt.sh ask-demo  # For project briefing
+./run-prompt.sh repo-demo # For code quality assessment
+```

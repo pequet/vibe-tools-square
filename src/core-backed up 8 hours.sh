@@ -443,12 +443,10 @@ find_template_file() {
             "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
         )
     elif [[ "$extension" == "md" ]]; then
-        # Repo/Plan task template search paths (same as txt templates)
+        # Repo task template search paths
         search_paths=(
-            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name.txt"
-            "$VIBE_TOOLS_SQUARE_HOME/config/templates/$template_name/template.txt"
-            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name.txt"
-            "$(pwd)/assets/.vibe-tools-square/config/templates/$template_name/template.txt"
+            "$VIBE_TOOLS_SQUARE_HOME/assets/templates/${template_name}.md"
+            "${SCRIPT_DIR}/../assets/templates/${template_name}.md"
         )
     fi
         
@@ -891,112 +889,117 @@ execute_task() {
     # Source the task configuration
     source "$task_file"
     
-    # Collect PARAM_* variables and build parameters from them
-    local collected_params=""
-    local param_vars_raw
-    param_vars_raw=$(compgen -v | grep "^PARAM_" 2>/dev/null || true)
+    # Extract task configuration variables (new config format)
+    local task_provider="${TASK_PROVIDER:-}"
+    local task_model="${TASK_MODEL:-}"
+    local task_template="${TASK_TEMPLATE:-}"
+    local task_prompt="${PROMPT:-}"
+    local task_output_prefix="${TASK_OUTPUT_PREFIX:-}"
     
-    if [[ -n "$param_vars_raw" ]]; then
-        local param_vars=($param_vars_raw)
-        for param_var in "${param_vars[@]}"; do
-            local param_name="${param_var#PARAM_}"  # Remove PARAM_ prefix
-            local param_value="${!param_var}"       # Get the value
-            
-            # Convert PARAM_MAX_TOKENS to --max-tokens format
-            local flag_name=$(echo "$param_name" | tr '[:upper:]' '[:lower:]' | sed 's/_/-/g')
-            collected_params+=" --${flag_name}=\"${param_value}\""
-        done
+    # For plan tasks - extract dual model configuration
+    local task_file_provider="${TASK_FILE_PROVIDER:-}"
+    local task_file_model="${TASK_FILE_MODEL:-}"
+    local task_thinking_provider="${TASK_THINKING_PROVIDER:-}"
+    local task_thinking_model="${TASK_THINKING_MODEL:-}"
+    
+    # Collect TASK_* template variables for placeholder processing
+    local task_var_names
+    task_var_names=$(compgen -v | grep "^TASK_" | grep -v "^TASK_\(NAME\|DESCRIPTION\|TYPE\|PROVIDER\|MODEL\|TEMPLATE\|OUTPUT_PREFIX\|FILE_PROVIDER\|FILE_MODEL\|THINKING_PROVIDER\|THINKING_MODEL\)$" || true)
+    local template_params=()
+    if [[ -n "$task_var_names" ]]; then
+        local task_var task_value param_flag
+        while IFS= read -r task_var; do
+            task_value="${!task_var}"
+            if [[ -n "$task_value" ]]; then
+                # Convert TASK_PROJECT_NAME to --project-name
+                param_flag="--${task_var#TASK_}"
+                param_flag="${param_flag//_/-}"
+                param_flag=$(echo "$param_flag" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
+                template_params+=("${param_flag}=${task_value}")
+            fi
+        done <<< "$task_var_names"
     fi
     
-    # If we have PARAM_* variables, use them; otherwise fall back to TASK_DEFAULT_PARAMS
-    local effective_params=""
-    if [[ -n "$collected_params" ]]; then
-        effective_params="$collected_params"
-    elif [[ -n "${TASK_DEFAULT_PARAMS:-}" ]]; then
-        effective_params="$TASK_DEFAULT_PARAMS"
+    # Build all_params starting with config-based defaults
+    local all_params=()
+    
+    # Add template or prompt parameter
+    if [[ -n "$task_template" ]]; then
+        all_params+=("--template=${task_template}")
+    elif [[ -n "$task_prompt" ]]; then
+        all_params+=("--prompt=${task_prompt}")
     fi
     
-    # Parse and process the effective parameters
-    local default_params=()
-    if [[ -n "$effective_params" ]]; then
-        # Process any placeholders in the parameters string
-        local processed_params="$effective_params"
-        
-        # Process placeholders using the remaining command line arguments
-        processed_params=$(process_placeholders "$processed_params" "$@")
-        
-        # Simple approach: use eval with array assignment to handle quoted parameters properly
-        eval "default_params=($processed_params)"
+    # Add model configuration
+    if [[ -n "$task_provider" ]]; then
+        all_params+=("--provider=${task_provider}")
+    fi
+    if [[ -n "$task_model" ]]; then
+        all_params+=("--model=${task_model}")
     fi
     
-    # Handle PROMPT variable if defined and no --prompt provided in command line
-    local prompt_found=false
+    # For plan tasks - add dual model configuration
+    if [[ "$TASK_TYPE" == "plan" ]]; then
+        [[ -n "$task_file_provider" ]] && all_params+=("--file-provider=${task_file_provider}")
+        [[ -n "$task_file_model" ]] && all_params+=("--file-model=${task_file_model}")
+        [[ -n "$task_thinking_provider" ]] && all_params+=("--thinking-provider=${task_thinking_provider}")
+        [[ -n "$task_thinking_model" ]] && all_params+=("--thinking-model=${task_thinking_model}")
+    fi
+    
+    # Add output file with prefix if specified
+    if [[ -n "$task_output_prefix" ]]; then
+        local timestamp=$(date +%Y-%m-%d_%H%M%S)
+        all_params+=("--output-file=${task_output_prefix}_${timestamp}.md")
+    fi
+    
+    # Add template parameters for placeholder substitution
+    if [[ ${#template_params[@]} -gt 0 ]]; then
+        all_params+=("${template_params[@]}")
+    fi
+    
+    # Check for PARAM_* variables and convert them to command line flags
+    local param_names
+    param_names=$(compgen -v | grep "^PARAM_" || true)
+    if [[ -n "$param_names" ]]; then
+        local param_name param_value flag_name
+        while IFS= read -r param_name; do
+            param_value="${!param_name}"
+            if [[ -n "$param_value" ]]; then
+                flag_name="--${param_name#PARAM_}"
+                flag_name="${flag_name//_/-}"
+                flag_name=$(echo "$flag_name" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
+                
+                # Special handling for include/exclude parameters that might have comma-separated values
+                if [[ "$flag_name" == "--include" || "$flag_name" == "--exclude" ]]; then
+                    # Split comma-separated values into separate parameters
+                    IFS=',' read -ra values <<< "$param_value"
+                    for value in "${values[@]}"; do
+                        # Trim whitespace
+                        value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                        if [[ -n "$value" ]]; then
+                            all_params+=("${flag_name}=${value}")
+                        fi
+                    done
+                else
+                    all_params+=("${flag_name}=${param_value}")
+                fi
+            fi
+        done <<< "$param_names"
+    fi
+    
+    # Check for --go flag specifically and add it if present
+    local go_flag_found=false
     for arg in "$@"; do
-        if [[ "$arg" == --prompt=* ]]; then
-            prompt_found=true
+        if [[ "$arg" == "--go" ]]; then
+            go_flag_found=true
             break
         fi
     done
-    
-    # If no --prompt in command line but PROMPT variable is defined, add it to default_params
-    if [[ "$prompt_found" == false && -n "${PROMPT:-}" ]]; then
-        default_params+=("--prompt=$PROMPT")
+    if [[ "$go_flag_found" == true ]]; then
+        all_params+=("--go")
     fi
     
-    # Start with processed default params
-    local all_params=()
-    if [[ ${#default_params[@]} -gt 0 ]]; then
-        all_params+=("${default_params[@]}")
-    fi
-    
-    # Add ALL command line parameters (allow overrides for core system parameters)
-    for arg in "$@"; do
-        # Remove any existing parameter of the same type to allow overrides
-        case "$arg" in
-            --prompt=*)
-                # Remove existing --prompt parameter
-                local filtered_params=()
-                for param in "${all_params[@]}"; do
-                    [[ "$param" != --prompt=* ]] && filtered_params+=("$param")
-                done
-                all_params=("${filtered_params[@]}")
-                all_params+=("$arg")
-                ;;
-            --provider=*)
-                # Remove existing --provider parameter
-                local filtered_params=()
-                for param in "${all_params[@]}"; do
-                    [[ "$param" != --provider=* ]] && filtered_params+=("$param")
-                done
-                all_params=("${filtered_params[@]}")
-                all_params+=("$arg")
-                ;;
-            --model=*)
-                # Remove existing --model parameter
-                local filtered_params=()
-                for param in "${all_params[@]}"; do
-                    [[ "$param" != --model=* ]] && filtered_params+=("$param")
-                done
-                all_params=("${filtered_params[@]}")
-                all_params+=("$arg")
-                ;;
-            --go)
-                all_params+=("$arg")
-                ;;
-            --*=*)
-                # For all other parameters, allow them through (template variables, etc.)
-                # Remove existing parameter of the same type first
-                local param_prefix="${arg%%=*}="
-                local filtered_params=()
-                for param in "${all_params[@]}"; do
-                    [[ "$param" != $param_prefix* ]] && filtered_params+=("$param")
-                done
-                all_params=("${filtered_params[@]}")
-                all_params+=("$arg")
-                ;;
-        esac
-    done
-    
+
     # Handle different task types based on their configuration
     case "$TASK_TYPE" in
         "ask")
@@ -1128,7 +1131,7 @@ execute_repo_task() {
     # Handle template processing if template is specified
     if [[ -n "$template_name" ]]; then
         # Find template file using helper function (with .md extension for repo tasks)
-        find_template_file "$template_name" "md"
+        find_template_file "$template_name" "txt"
         local template_file="$FOUND_TEMPLATE_PATH"
         
         # Load and process template
@@ -1194,7 +1197,7 @@ execute_plan_task() {
     # Handle template processing if template is specified
     if [[ -n "$template_name" ]]; then
         # Find template file using helper function (with .md extension for plan tasks)
-        find_template_file "$template_name" "md"
+        find_template_file "$template_name" "txt"
         local template_file="$FOUND_TEMPLATE_PATH"
         
         # Load and process template

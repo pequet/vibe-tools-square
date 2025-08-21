@@ -445,3 +445,33 @@ cat assets/.vibe-tools-square/tasks/ask.conf
 - Actual vibe-tools command execution
 - Multi-step workflows
 - Advanced template features
+
+## Quick Testing Commands (Added 2025-08-20)
+
+```bash
+# ============================================
+# TESTING PROMPT-BASED TASKS (BASIC VERSIONS)
+# ============================================
+
+# Test the basic 'ask' task
+./run-prompt.sh ask --prompt="What are the main features of JavaScript ES6?" --go
+
+# Test the basic 'repo' task
+./run-prompt.sh repo --prompt="Explain the structure of this repository" --include="README.md,src/" --go
+
+# Test the basic 'plan' task
+./run-prompt.sh plan --prompt="Create a plan for adding user authentication" --include="src/,README.md" --go
+
+# ============================================
+# TESTING TEMPLATE-BASED TASKS (DEMO VERSIONS)
+# ============================================
+
+# Test the 'ask-demo' task (project briefing)
+./run-prompt.sh ask-demo --project-name="Vibe Tools Square" --user-role="Lead Developer" --domain="CLI Development" --tech-stack="Bash, JavaScript" --priority="High" --context="file:README.md" --deadline="End of month" --go
+
+# Test the 'plan-demo' task (feature planning)
+./run-prompt.sh plan-demo --feature-name="OAuth Authentication" --complexity="High" --priority="Critical" --requirements-file="README.md" --architecture-file="README.md" --dependencies="Express, JWT, Passport" --timeline="3-week sprint" --team-size="2 developers" --target-audience="Enterprise users" --go
+
+# Test the 'repo-demo' task (code analysis)
+./run-prompt.sh repo-demo --include-patterns="src/,README.md" --exclude-patterns="node_modules/,test/" --focus="code maintainability" --principles="SOLID, DRY" --language="Bash" --frameworks-file="README.md" --standards-file="README.md" --architecture="CLI Tool" --go
+```

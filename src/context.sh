@@ -90,7 +90,9 @@ prepare_ice() {
                 [[ -z "$item" ]] && continue
                 # If it's a directory, exclude everything inside it
                 if [[ -d "$source_dir/$item" ]]; then
-                    filters+=("--exclude=$item/***")
+                    # Remove trailing slash if present, then add correct patterns
+                    local clean_item="${item%/}"
+                    filters+=("--exclude=$clean_item/**")
                 else
                     # It's a file, exclude it exactly
                     filters+=("--exclude=$item")
@@ -110,7 +112,9 @@ prepare_ice() {
                 [[ -z "$item" ]] && continue
                 # If it's a directory, include everything inside it recursively
                 if [[ -d "$source_dir/$item" ]]; then
-                    filters+=("--include=$item/***")
+                    # Remove trailing slash if present, then add correct patterns
+                    local clean_item="${item%/}"
+                    filters+=("--include=$clean_item/" "--include=$clean_item/**")
                 else
                     # It's a file, include it exactly from root (add leading slash for precise matching)
                     if [[ "$item" != /* ]]; then

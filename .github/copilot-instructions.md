@@ -146,6 +146,12 @@ globs: *
 
 ### Custom Tasks
 
+*   The `hello` task should serve as an advanced example of the `ask` task, demonstrating the usage of templates and variable injection. A new configuration file and template file should be created for the `hello` task, similar to `#file:template.txt` and `#file:hello.conf`. The content should be professional, engaging, and slightly humorous.
+*   The `advanced-ask` task demonstrates how to use templates with variable injection and serves as a demo/template/best practice example.
+*   Advanced versions of the `repo` and `plan` tasks must be created, demonstrating the usage of templates and variable injection, similar to the advanced `ask` task (the `hello` task).
+*   When creating advanced task examples (ask, plan, repo), the task names, descriptions, and output prefixes should be namespaced with "demo" and the task type (ask, plan, repo) and should be consistent in telling a story. For example: "demo-ask-example", "demo-plan-example", "demo-repo-example".
+*   The task name can be `AskDemo`, `RepoDemo`, and `PlanDemo`. The task template should be `<task type> demo <action>` (e.g., `ask demo project briefing`). The task output prefix will be `<task type> demo <noun>` (e.g., `ask demo project brief`). This naming convention should be helpful, declarative, and demonstrate best practices for namespacing.
+
 ### Bug Fixes and Codebase Integrity
 
 *   **CRITICAL:** Under no circumstances should core utilities or shared scripts like `logging_utils.sh` be modified directly to resolve issues in specific tasks. Such utilities are used by numerous scripts, and direct modifications can introduce widespread problems.
@@ -181,3 +187,52 @@ globs: *
 *   `repomix.config.json`: Configures included files from `public/**/*`, excludes common development artifacts (.DS_Store, node_modules, logs, etc.), and sets reasonable output limits (10MB max file size, 20 top files).
 *   `.repomixignore`: Uses exclude-all pattern (`*`) then includes only the `public/` directory as a backup exclusion method.
 *   When copying configuration files during install and update, the script must copy `providers.conf` from assets to runtime as `providers.conf`. There must be no renaming or modification of the filename.
+*   The `#file:repo.conf` and `#file:plan.conf` files must be updated to use the new configuration file format, similar to `#file:ask.conf`.
+
+### Task Configuration
+*   The configuration file names for the demo tasks are:
+    *   `ask-demo.conf`
+    *   `plan-demo.conf`
+    *   `repo-demo.conf`
+*   The task names are:
+    *   `ask-demo`
+    *   `plan-demo`
+    *   `repo-demo`
+*   The task template names should be `<task type> demo <action>` (e.g., `ask demo project briefing`).
+*   The task output prefix will be `<task type> demo <noun>` (e.g., `ask demo project brief`).
+*   TASK_DESCRIPTION for the simple tasks:
+    *   ASK: `Direct AI query with simple prompt-based questions`
+    *   PLAN: `Generate detailed implementation plans based on codebase analysis`
+    *   REPO: `Analyze repository structure and provide insights on code organization`
+*   The configuration files should define parameters using the `PARAM_` prefix, not `TASK_DEFAULT_PARAMS`.
+*   For all three simple tasks (ask, plan, repo), use a generic prompt related to the task type instead of a specific example. For example, for repo, use `Explain what this repository is about`.
+
+### Testing Commands
+
+```bash
+# ============================================
+# TESTING PROMPT-BASED TASKS (BASIC VERSIONS)
+# ============================================
+
+# Test the basic 'ask' task
+./run-prompt.sh ask --prompt="What are the main features of JavaScript ES6?" --go
+
+# Test the basic 'repo' task
+./run-prompt.sh repo --prompt="Explain what this repository is about" --include="README.md,src/" --go
+
+# Test the basic 'plan' task
+./run-prompt.sh plan --prompt="Create a plan for adding user authentication" --include="src/,README.md" --go
+
+# ============================================
+# TESTING TEMPLATE-BASED TASKS (DEMO VERSIONS)
+# ============================================
+
+# Test the 'ask-demo' task (project briefing)
+./run-prompt.sh ask-demo --project-name="Vibe Tools Square" --user-role="Lead Developer" --domain="CLI Development" --tech-stack="Bash, JavaScript" --priority="High" --readme-path="README.md" --deadline="End of month" --go
+
+# Test the 'plan-demo' task (feature planning)
+./run-prompt.sh plan-demo --feature-name="OAuth Authentication" --complexity="High" --priority="Critical" --requirements-file="README.md" --architecture-file="README.md" --dependencies="Express, JWT, Passport" --timeline="3-week sprint" --team-size="2 developers" --target-audience="Enterprise users" --go
+
+# Test the 'repo-demo' task (code analysis)
+./run-prompt.sh repo-demo --include-patterns="src/,README.md" --exclude-patterns="node_modules/,test/" --focus="code maintainability" --principles="SOLID, DRY" --language="Bash" --frameworks-file="README.md" --standards-file="README.md" --architecture="CLI Tool" --go
+```
