@@ -1,3 +1,11 @@
+---
+type: guide
+domain: methods
+subject: Vibe-Tools Square
+status: active
+tags: notes-active
+summary: "Quick reference for handling special characters in parameters and templates."
+---
 # Special Characters Guide
 
 Quick reference for handling special characters in `vibe-tools-square` parameters and templates.

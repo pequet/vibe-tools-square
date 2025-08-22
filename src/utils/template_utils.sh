@@ -9,10 +9,25 @@ set -euo pipefail
 # Purpose: Provides template placeholder processing utility functions.
 # Refer to main project for detailed docs.
 
+# --- Guard against direct execution ---
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "This script provides utility functions and is not meant to be executed directly." >&2
+    echo "Please source it from another DLS script." >&2
+    exit 1
+fi
+
+# --- Function Definitions ---
+
+# *
+# * Template Placeholder Processing
+# *
+
+# Returns the processed template content with all placeholders substituted.
+# 
 # Usage:
 #   process_placeholders "content with {{PLACEHOLDERS}}" --param1="value1" --param2="value2" --file_param=file:path/to/file.md
 #
-# Parameters:
+# Parameters (named parameters):
 #   $1 - Template content with placeholders in the format {{PLACEHOLDER_NAME}} or {{PLACEHOLDER_NAME=DEFAULT_VALUE}}
 #   $@ - Named parameters to substitute, format: --parameter_name="value"
 #
@@ -25,9 +40,6 @@ set -euo pipefail
 #   file:path/to/file - Reads the content of the specified file and uses it as the value
 #                       Multiple files can be specified with commas: file:file1.md,file2.md
 #                       Paths are relative to the current directory (PWD) by default
-#
-# Returns:
-#   Processed template content with all placeholders substituted
 process_placeholders() {
     local template_content="$1"
     shift

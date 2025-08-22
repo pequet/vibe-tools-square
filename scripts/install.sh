@@ -35,14 +35,14 @@ set -o pipefail
 # Options:
 #   --target=PATH   Install to specified path (default: ~/.vibe-tools-square)
 #   --update        Update existing installation (no global command changes)
-#   -h, --help      Show this help message and exit
+#   --help      Show this help message and exit
 #
 # Dependencies:
 #   - rsync (for context management in repo/plan commands)
 #   - vibe-tools (for AI interactions, must be installed globally)
 #
 # Changelog:
-#   1.0.0 - 2025-08-14 - Initial release with modular architecture
+#   1.0.0 - 2025-08-22 - Initial release with modular architecture
 #
 # Support the Project:
 #   - Buy Me a Coffee: https://buymeacoffee.com/pequet
@@ -420,7 +420,6 @@ show_help() {
     print_info ""
     print_info "Examples:"
     print_info "  $0                                          # Fresh install to ~/.vibe-tools-square"
-    print_info "  $0 --target=~/Google\ Drive/vibe-tools     # Install to Google Drive"
     print_info "  $0 --target=/custom/path                    # Install to custom location"
     print_info "  $0 --update                                 # Update default installation"
     print_info "  $0 --update --target=/custom/path          # Update custom installation"

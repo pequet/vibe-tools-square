@@ -1484,6 +1484,7 @@ Options:
 
 Example Model Aliases (from providers.conf):
   anthropic/claude-3-5-sonnet    # Anthropic Claude 3.5 Sonnet  
+  gemini/free                    # Google Gemini 2.0 Flash (free)
   gemini/gemini-2-0-flash        # Google Gemini 2.0 Flash (free)
   gemini/gemini-2-5-flash        # Google Gemini 2.5 Flash
   gemini/gemini-2-5-pro          # Google Gemini 2.5 Pro  

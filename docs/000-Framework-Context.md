@@ -46,7 +46,7 @@ Core/
                 └── Vibe-Tools/
                     └── Vibe-Tools Square/
                         ├── vibe-tools-square/  # This Public Repo
-                        └── private/                 # Assets tracked by the parent framework
+                        └── private/            # Assets tracked by the parent framework
 ```
 
 ### Level 2: Split Repository Pattern
@@ -56,19 +56,25 @@ This path reveals a **Public-Private Pattern** at the `Vibe-Tools Square` level,
 ```text
 Vibe-Tools Square/                               # Grouping
 ├── vibe-tools-square/                           # This Public Repo (contains symlinks to the private assets)
+│   ├── .claude -> ../private/.claude/
 │   ├── .cursor -> ../private/.cursor/
+│   ├── .github -> ../private/.github/
 │   ├── .specstory -> ../private/.specstory/
 │   ├── inbox -> ../private/inbox/
 │   ├── memory-bank -> ../private/memory-bank/
 │   ├── archives/
 │   ├── docs/
 │   ├── scripts/
-│   └── src/
+│   ├── src/
+│   └── CLAUDE.md -> ../private/CLAUDE.md
 └── private/                                     # Assets tracked by the parent framework
+    ├── .claude/
     ├── .cursor/
+    ├── .github/
     ├── .specstory/
     ├── inbox/
-    └── memory-bank/
+    ├── memory-bank/
+    └── CLAUDE.md
 ```
 
 This organization allows for a clean public repository while maintaining a rich, private context for development, and the ability to switch between the two contexts seamlessly.

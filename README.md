@@ -1,44 +1,64 @@
 # Vibe-Tools Square
 
-**A query template engine that transforms AI interactions into reusable, parameterized workflows.**
+Template-driven AI workflow automation. Transform repetitive vibe-tools commands into reusable, parameterized tasks.
 
-Instead of retyping similar vibe-tools commands, create template-driven tasks with variable substitution and execution controls.
+**Before:** Manual command repetition
 
-## Core Value Proposition
-
-Transform this repetitive workflow:
 ```bash
-# Processing different content with similar analysis patterns
 vibe-tools ask "Summarize this meeting transcript: [paste long transcript]"
-vibe-tools repo "Review this new feature for security vulnerabilities" --subdir="src/auth/"  
-vibe-tools plan "Create deployment strategy for this service" --subdir="config/,deploy/"
+vibe-tools repo "Review this feature for security vulnerabilities" --subdir="src/auth/"  
+vibe-tools plan "Create deployment strategy for this service" --subdir="deploy/"
 ```
 
-Into this structured approach:
+**After:** Automated template workflows
+
 ```bash
-# Template-driven with variable content injection
-./run-prompt.sh meeting-summary --transcript="file:transcripts/standup-2025-08-21.txt" --go
-./run-prompt.sh security-review --feature="auth" --include="src/auth/" --go
-./run-prompt.sh deploy-strategy --service="user-service" --env="production" --include="config/,deploy/" --go
+./run-prompt.sh ask-meeting-summary --transcript="file:transcripts/standup.txt" --go
+./run-prompt.sh repo-security-review --include="src/auth/,tests/auth/" --exclude="*.log" --go
+./run-prompt.sh plan-deploy-strategy --service="user-service" --include="config/,deploy/" --go
 ```
 
-## The Three Modes of Thinking: Ask vs. Repo vs. Plan
+## Core Features
 
-Each vibe-tools command serves a distinct purpose - understanding these differences is crucial:
+- **Template Engine**: Token replacement system with variable substitution
+- **Curated Context Engine**: For `repo` and `plan` -based commands, builds temporary Isolated Context Environment with only explicitly required files for cost optimization
+- **Provider Agnostic**: Switch AI providers via configuration and parameters
+- **Atomic Operations**: `ask` (general questions), `repo` (codebase analysis), `plan` (strategic planning)
 
-| Command | Purpose | Useful Automation Example |
-|---------|---------|---------------------------|
-| **ask** (The Interrogator) | General programming questions requiring no codebase context | "Summarize this meeting transcript: {{TRANSCRIPT}}" |
-| **repo** (The Code Archaeologist) | Repository-specific analysis, search, and code review | "Review {{MODULE}} for security vulnerabilities" |
-| **plan** (The Project Architect) | Strategic planning and refactoring based on codebase analysis | "Create deployment plan for {{SERVICE}} to {{ENVIRONMENT}}" |
+## Smart Context Management
 
-## Prerequisites
+Control exactly which files are analyzed to reduce costs and improve focus:
 
-- **vibe-tools** installed globally with API keys configured
-- **rsync** command (required for repo/plan context management)
-- Basic familiarity with vibe-tools commands
+```bash
+# Include specific directories only
+./run-prompt.sh repo-code-review --include="src/components/,tests/unit/" --go
+
+# Include files but exclude patterns within them
+./run-prompt.sh repo-security-scan --include="src/" --exclude="*.test.js,*.spec.ts" --go
+
+# Complex filtering
+./run-prompt.sh repo-api-review --include="api/,docs/" --exclude="*.log,temp/" --go
+```
+
+**How it works:**
+- Creates temporary isolated environment with only specified files
+- Uses `rsync` filters for precise file selection
+- Reduces token usage and API costs
+- Wildcards supported: `*.test.js`, `*.spec.ts`, `*.log`, etc.
+
+## Command Types
+
+Each vibe-tools command type serves a distinct purpose, and understanding these differences is crucial:
+
+| Command | Purpose | Example Use Case |
+|---------|---------|------------------|
+| **ask** | General questions (no codebase context) | "Summarize this meeting transcript: {{TRANSCRIPT}}" |
+| **repo** | Codebase analysis and code review | "Review {{MODULE}} for security vulnerabilities" |
+| **plan** | Strategic planning with codebase context | "Create deployment plan for {{SERVICE}} to {{ENVIRONMENT}}" |
 
 ## Installation
+
+**Prerequisites:** vibe-tools installed globally with API keys configured, rsync command
 
 ```bash
 git clone https://github.com/pequet/vibe-tools-square.git
@@ -46,81 +66,45 @@ cd vibe-tools-square
 ./scripts/install.sh
 ```
 
-## Quick Start: Learn from Three Demo Tasks
+## Quick Start
 
-The repository includes three demo tasks that show template-driven workflows:
-
-- **`ask-demo`** - See how to create templates for processing variable content (project briefings, document analysis, etc.)
-- **`repo-demo`** - Learn codebase analysis patterns with parameterized focus areas
-- **`plan-demo`** - Understand feature planning workflows with variable complexity and scope
-
-Each demo task includes configuration files showing template structure and placeholder usage.
-
-**To explore the demos:**
-1. Run `./run-prompt.sh --list-tasks` to see all available tasks
-2. Check demo configurations in `assets/.vibe-tools-square/tasks/` 
-3. View templates in `assets/.vibe-tools-square/config/templates/`
-4. Test with custom variables: `./run-prompt.sh <demo-name> --variable-name="value" --go` (defaults are set, but variables let you inject specific content into placeholders)
-
-## What We're Building (Wrapper Layer Only)
-
-- **Simple CLI API**: Flexible command-line interface for atomic AI operations via vibe-tools
-- **Template + Placeholder Engine**: Token replacement system for reusable workflows
-- **Config-Driven Everything**: No hardcoded values, all settings from config files
-- **Modular Architecture**: Clean separation of concerns while preserving functionality
-- **Provider Agnostic**: Seamless AI provider switching via config presets
-- **Curated Context Engine**: For `repo` and `plan` commands, builds temporary Isolated Context Environment with only explicitly required files to control context size and cost
-- **Atomic Operations**: Supports `ask`, `repo`, and `plan` commands only
-
-## Context Management for Repo/Plan Commands
-
-A key innovation is the dynamic file inclusion/exclusion system using `rsync`. Instead of editing `.repomixignore` for each command:
-
-- **`--include=` parameter**: Comma-delimited list of files/folders to include
-- **`--exclude=` parameter**: Comma-delimited list of files/folders to exclude  
-- **Isolated Context Environment**: Copies only relevant files to temporary folder
-- **Cost Control**: Reduces context size, tokens, and API costs
-
-Example:
+**Basic command:**
 ```bash
-./run-prompt.sh security-review --include="src/auth/,tests/auth/" --exclude="*.log,node_modules/" --go
+./run-prompt.sh ask --prompt="Explain the difference between a bug and a feature, with examples" --go
 ```
 
-Use `./run-prompt.sh --list-tasks` to see all available tasks:
+**Explore demo tasks:**
+1. List available tasks: `./run-prompt.sh --list-tasks`
+2. Try demos: `ask-demo`, `repo-demo`, `plan-demo`
+3. Run with variables: `./run-prompt.sh ask-demo --topic="authentication" --go`
 
-- `ask` - General AI questions (no codebase context)
-- `repo` - Repository analysis with file context  
-- `plan` - Implementation planning with codebase awareness
-- `ask-demo` - Template demonstration with variable injection
-- `repo-demo` - Advanced codebase analysis workflow
-- `plan-demo` - Feature planning workflow demonstration
-
-## Available Tasks
+Demo configurations: `assets/.vibe-tools-square/tasks/`  
+Templates: `assets/.vibe-tools-square/config/templates/`
 
 ## Creating Custom Tasks
 
-1. Create a task configuration in `~/.vibe-tools-square/tasks/`:
+We suggest prefacing the task name with the task type, e.g. `ask-task`, `repo-task`, `plan-task`.
+
+**1. Create task configuration:** `~/.vibe-tools-square/tasks/ask-task.conf`
 
 ```bash
-# my-task.conf
-TASK_NAME="my-task"
-TASK_DESCRIPTION="Custom workflow description"
-TASK_TYPE="ask"  # or "repo" or "plan"
+TASK_NAME="ask-task"
+TASK_DESCRIPTION="Custom workflow description"  
+TASK_TYPE="ask"  
 PROMPT="Analyze {{TOPIC=general programming}} concepts"
 PARAM_MAX_TOKENS="4000"
 ```
 
-2. Run your custom task:
-
+**2. Execute task:**
 ```bash
-./run-prompt.sh my-task --topic="React hooks" --go
+./run-prompt.sh ask-task --topic="React hooks" --go
 ```
 
 ## Documentation
 
-- **[Testing Commands](docs/100-Testing-Commands.md)** - Complete command reference
-- **[Special Characters Guide](docs/110-Special-Characters-Guide.md)** - Handling special characters in prompts  
-- **[Using Placeholders](docs/120-Using-Placeholders.md)** - Template variable system
+- [Testing Commands](docs/100-Testing-Commands.md) - Complete command reference
+- [Special Characters Guide](docs/110-Special-Characters-Guide.md) - Handling special characters
+- [Using Placeholders](docs/120-Using-Placeholders.md) - Template variable system
 
 ## License
 

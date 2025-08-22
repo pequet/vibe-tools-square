@@ -1,3 +1,11 @@
+---
+type: guide
+domain: methods
+subject: Vibe-Tools Square
+status: active
+tags: notes-active
+summary: "Guide for template and configuration placeholder usage."
+---
 # Using Placeholders
 
 Guide for template and configuration placeholder usage in `vibe-tools-square`.

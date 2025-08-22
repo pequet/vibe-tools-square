@@ -46,7 +46,7 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 #   - rsync (for context management in repo/plan commands)
 #
 # Changelog:
-# 1.0.0 - 2025-08-14 - Initial release with modular architecture
+# 1.0.0 - 2025-08-22 - Initial release with modular architecture
 #
 # Support the Project:
 #   - Buy Me a Coffee: https://buymeacoffee.com/pequet

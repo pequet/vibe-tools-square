@@ -1,6 +1,6 @@
 ---
 type: guide
-domain: system-state
+domain: methods
 subject: Vibe-Tools Square
 status: active
 summary: Practical examples demonstrating the power and utility of each vibe-tools command type
