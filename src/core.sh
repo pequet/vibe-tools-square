@@ -860,15 +860,8 @@ execute_vibe_command() {
         echo "=== EXECUTION ATTEMPT ===" >> "$log_file"
         echo "Started at: $(date)" >> "$log_file"
         
-        # DEBUG: Log working directory and ICE context info
+        # DEBUG: Log working directory
         echo "Working directory: $(pwd)" >> "$log_file"
-        echo "ICE content directory: $VIBE_TOOLS_SQUARE_HOME/content" >> "$log_file"
-        
-        # DEBUG: Show ICE context files
-        capture_ice_context
-        echo "=== ICE CONTEXT DEBUG ===" >> "$log_file"
-        echo "$ICE_CONTEXT_INFO" >> "$log_file"
-        echo "" >> "$log_file"
         
         # Escape single quotes correctly for bash using the proven legacy technique
         # Replace each ' with '\''
@@ -1235,6 +1228,14 @@ execute_repo_task() {
     # Create comprehensive execution log using helper function
     create_execution_log "$vibe_template_name" "prompt: $question" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$question" "vibe-tools repo" "$ice_context" "${params[@]+"${params[@]}"}"
     
+    # Add ICE context debug info to log before execution
+    {
+        echo "ICE content directory: $VIBE_TOOLS_SQUARE_HOME/content"
+        echo "=== ICE CONTEXT DEBUG ==="
+        echo "$ice_context"
+        echo ""
+    } >> "$EXECUTION_LOG_FILE"
+    
     # Execute command using helper function
     execute_vibe_command "$go_flag" "$question" "vibe-tools repo" "$output_file" "$EXECUTION_LOG_FILE"
 }
@@ -1309,6 +1310,14 @@ execute_plan_task() {
         log_template_name="$template_name"
     fi
     create_execution_log "$log_template_name" "prompt: $question" "$file_model" "$file_provider" "" "$output_file" "$go_flag" "$question" "vibe-tools plan" "$ice_context" "${params[@]+"${params[@]}"}"
+    
+    # Add ICE context debug info to log before execution
+    {
+        echo "ICE content directory: $VIBE_TOOLS_SQUARE_HOME/content"
+        echo "=== ICE CONTEXT DEBUG ==="
+        echo "$ice_context"
+        echo ""
+    } >> "$EXECUTION_LOG_FILE"
     
     # Execute command using helper function
     execute_vibe_command "$go_flag" "$question" "vibe-tools plan" "$FINAL_PLAN_OUTPUT_FILE" "$EXECUTION_LOG_FILE"
