@@ -860,6 +860,16 @@ execute_vibe_command() {
         echo "=== EXECUTION ATTEMPT ===" >> "$log_file"
         echo "Started at: $(date)" >> "$log_file"
         
+        # DEBUG: Log working directory and ICE context info
+        echo "Working directory: $(pwd)" >> "$log_file"
+        echo "ICE content directory: $VIBE_TOOLS_SQUARE_HOME/content" >> "$log_file"
+        
+        # DEBUG: Show ICE context files
+        capture_ice_context
+        echo "=== ICE CONTEXT DEBUG ===" >> "$log_file"
+        echo "$ICE_CONTEXT_INFO" >> "$log_file"
+        echo "" >> "$log_file"
+        
         # Escape single quotes correctly for bash using the proven legacy technique
         # Replace each ' with '\''
         local safe_content=${processed_content//\'/\'\\\'\'}
@@ -870,6 +880,15 @@ execute_vibe_command() {
             local escaped_arg=${a//\'/\'\\\'\'}
             exec_cmd+=" '$escaped_arg'"
         done
+        
+        # DEBUG: Log the exact command being executed
+        echo "=== EXACT VIBE-TOOLS EXECUTION COMMAND ===" >> "$log_file"
+        echo "Command: $exec_cmd" >> "$log_file"
+        echo "Arguments breakdown:" >> "$log_file"
+        for a in "${vibe_args[@]}"; do
+            echo "  $a" >> "$log_file"
+        done
+        echo "" >> "$log_file"
         
         # Execute from ICE content directory for deterministic environment
         local prev_dir="$(pwd)"
