@@ -1,28 +1,40 @@
-# Special Characters Guide - Vibe-Tools Square
+# Special Characters Guide
 
-## Template Placeholders
+Quick reference for handling special characters in `vibe-tools-square` parameters and templates.
 
-**Templates use UPPERCASE placeholders**: `{{STRING1}}`, `{{STRING2}}`, etc.
-**Parameters use lowercase names**: `--string1=value`, `--string2=value`, etc.
+## Template Placeholder System
 
-The system automatically converts parameter names to uppercase when matching placeholders.
+- **Templates**: Use `{{UPPERCASE}}` placeholders (`{{STRING1}}`, `{{STRING2}}`)
+- **Parameters**: Use `--lowercase` names (`--string1=value`, `--string2=value`)
+- **Conversion**: System automatically converts parameter names to uppercase for matching
 
 
 
-## Complete Special Characters Reference
+## Quick Reference Table
+
+| Character | Context | Wrap With | Example | Result | Notes |
+|-----------|---------|-----------|---------|--------|-------|
+| `"` (double quote) | Parameter | Single quotes `'` | `--param='"hello"'` | `"hello"` | Preserves spaces, prevents expansion |
+| `"` (double quote) | Template | N/A | `{{PARAM="hello"}}` | `"hello"` | No wrapping needed in templates |
+| `'` (single quote) | Parameter | Double quotes `"` | `--param="'hello'"` | `'hello'` | Prevents variable expansion |
+| `'` (single quote) | Template | N/A | `{{PARAM='hello'}}` | `'hello'` | No wrapping needed in templates |
+| `` ` `` (backtick) | Parameter | Single quotes `'` | `--param='`cmd`'` | `` `cmd` `` | Prevents command execution |
+| `` ` `` (backtick) | Template | N/A | `{{PARAM=`cmd`}}` | `` `cmd` `` | No wrapping needed in templates |
+| `$` (literal) | Parameter | Single quotes `'` | `--param='$50'` | `$50` | Prevents variable expansion |
+| `$` (expand) | Parameter | Double quotes `"` | `--param="$USER"` | `john` | Expands environment variables |
+| `$` (literal) | Template | N/A | `{{PARAM=$50}}` | `$50` | No wrapping needed in templates |
+| `\` (backslash) | Parameter | N/A | `--param="value\\path"` | `value\path` | Used to escape special characters |
+| ` ` (space) | Parameter | Quotes `"` or `'` | `--param="multi word value"` | `multi word value` | Required for multi-word parameters |
+
+## Detailed Examples
 
 ### Double Quotes in Parameters
 ```bash
-# ✅ CORRECT: Use single quotes to wrap (simple)
---param='"hey"'                   # Results in: "hey"
---param='"hello world"'           # Results in: "hello world"
-
-# ✅ CORRECT: With variable expansion
---param='"$USER says hello"'      # Results in: "username says hello" (variable expanded)
---param='"$5 bill"'               # Results in: "$5 bill" (shell expands $5)
-
-# ✅ CORRECT: Literal dollar signs
---param='"$1,234.56"'             # Results in: "$1,234.56" (literal, $1 usually empty)
+# ✅ CORRECT: Use single quotes to wrap
+--param='"hey"'                   # → "hey"
+--param='"hello world"'           # → "hello world"
+--param='"$USER says hello"'      # → "john says hello" (expanded)
+--param='"$1,234.56"'             # → "$1,234.56" (literal)
 
 # ❌ INCORRECT: Will break shell parsing
 --param=""hello world""
@@ -30,16 +42,11 @@ The system automatically converts parameter names to uppercase when matching pla
 
 ### Single Quotes in Parameters  
 ```bash
-# ✅ CORRECT: Use double quotes to wrap (simple)
---param="'hey'"                   # Results in: 'hey'
---param="'hello world'"           # Results in: 'hello world'
-
-# ✅ CORRECT: With literal dollar signs
---param="'\$10 bill'"             # Results in: '$10 bill' (literal $10)
---param="'\$99.99'"               # Results in: '$99.99' (literal dollar sign)
-
-# ✅ CORRECT: Complex escaping (advanced)
---param="'Don'\''t do this'"      # Results in: 'Don't do this' (complex escaping)
+# ✅ CORRECT: Use double quotes to wrap
+--param="'hey'"                   # → 'hey'
+--param="'hello world'"           # → 'hello world'
+--param="'\$10 bill'"             # → '$10 bill' (literal $)
+--param="'Don'\''t do this'"      # → 'Don't do this' (complex)
 
 # ❌ INCORRECT: Will break shell parsing
 --param=''hello world''
@@ -47,135 +54,103 @@ The system automatically converts parameter names to uppercase when matching pla
 
 ### Backticks in Parameters
 ```bash
-# ✅ CORRECT: Simple backticks (two ways)
---param="\`hey\`"                 # Results in: `hey` (escaped)
---param='`hey`'                   # Results in: `hey` (quoted)
+# ✅ CORRECT: Escape or quote backticks
+--param="\`hey\`"                 # → `hey` (escaped)
+--param='`hey`'                   # → `hey` (quoted)
+--param='`console.log("Hello");`' # → `console.log("Hello");`
+--param='`$100 bill`'             # → `$100 bill` (literal)
 
-# ✅ CORRECT: Variables preserved literally in single quotes
---param='`$100 bill`'             # Results in: `$100 bill` (literal, no expansion in single quotes)
-
-# ✅ CORRECT: Code snippets
---param='`console.log("Hello");`' # Results in: `console.log("Hello");`
-
-# ❌ INCORRECT: Unescaped backticks execute as commands
---param=`hello`                   # Will try to execute 'hello' command
+# ❌ INCORRECT: Will execute as command
+--param=`hello`
 ```
 
 ### Dollar Signs (Variables)
 ```bash
-# ✅ To EXPAND variables (shell processes them):
---param='"$USER logged in"'       # Results in: "john logged in"
---param='"$5 bill"'               # Results in: "$5 bill" (shell expands $5)
---param='`$HOME/file`'            # Results in: `/home/john/file`
+# ✅ EXPAND variables (use double quotes)
+--param='"$USER logged in"'       # → "john logged in"
+--param='"$HOME/file"'            # → "/home/john/file"
 
-# ✅ To PREVENT expansion (literal $ signs):
---param="'\$10 bill'"             # Results in: '$10 bill' (literal $10)
---param="'\$50 bill'"             # Results in: '$50 bill' (literal)
---param="'\$99.99'"               # Results in: '$99.99' (literal dollar sign)
-
-# ✅ Mixed scenarios:
---param='$50'                     # Results in: whatever $50 expands to (usually empty)
---param='"$1,234.56"'             # Results in: "$1,234.56" (literal, $1 usually empty)
+# ✅ LITERAL dollar signs (use single quotes)
+--param="'\$10 bill'"             # → '$10 bill'
+--param='$50'                     # → $50 (literal)
+--param='"$1,234.56"'             # → "$1,234.56" (literal, $1 empty)
 
 # ❌ INCORRECT: Unquoted variables
---param=$HOME                     # Will expand to path, may break on spaces
+--param=$HOME                     # May break on spaces
 ```
 
-### Complex Real-World Examples
+### Complex Examples
 ```bash
-# ✅ FINANCIAL DATA:
---amount='"$1,234.56"'            # Results in: "$1,234.56" (literal dollar sign)
---price="'\$99.99'"               # Results in: '$99.99' (literal dollar sign)
+# Financial data
+--amount='"$1,234.56"'            # → "$1,234.56" (literal)
+--price="'\$99.99'"               # → '$99.99' (literal)
 
-# ✅ CODE SNIPPETS:
---code='`console.log("Hello");`'  # Results in: `console.log("Hello");`
---bash='"echo '\''hello'\''"'     # Results in: "echo 'hello'" (nested quotes)
+# Code snippets
+--code='`console.log("Hello");`'  # → `console.log("Hello");`
+--bash='"echo '\''hello'\''"'     # → "echo 'hello'" (nested)
 
-# ✅ MIXED CONTENT:
+# Mixed content
 --text='"User $USER said '\''Hi'\'' and ran `pwd`"'
-# Results in: "User john said 'Hi' and ran /current/path"
+# → "User john said 'Hi' and ran /current/path"
 ```
 
-## Shell Processing Order
+## Processing Flow
 
-1. **Shell processes the command line first**:
-   - Expands variables like `$USER`, `$HOME`
-   - Processes quote escaping
-   - Handles command substitution (backticks)
+1. **Shell processing**: Expands variables, handles quote escaping, processes backticks
+2. **Script processing**: Direct string replacement in templates, safe shell escaping
+3. **Final output**: All special characters preserved using proven escaping techniques
 
-2. **Our script receives the processed values**:
-   - Performs direct string replacement in templates
-   - Uses proven shell escaping for execution
+## Wrapping Strategy
 
-3. **Final execution**:
-   - Content is safely escaped using legacy `'\''` technique
-   - All special characters preserved in final output
-
-## Quote Wrapping Strategy
-
-| Content Contains | Wrap With | Example |
-|------------------|-----------|---------|
+| Content | Wrap With | Example |
+|---------|-----------|---------|
 | Double quotes `"` | Single quotes `'` | `--param='"hello"'` |
 | Single quotes `'` | Double quotes `"` | `--param="'hello'"` |
-| Backticks `` ` `` | Either + escape | `--param="\`hello\`"` or `--param='`hello`'` |
-| Dollar signs `$` | Single quotes `'` (literal) | `--param='$50'` |
-| Dollar signs `$` | Double quotes `"` (expand) | `--param="$USER"` |
-| Mixed characters | Plan carefully | See examples above |
+| Backticks `` ` `` | Either + escape | `--param="\`hello\`"` |
+| Dollar signs `$` (literal) | Single quotes `'` | `--param='$50'` |
+| Dollar signs `$` (expand) | Double quotes `"` | `--param="$USER"` |
 
-## Debugging Tips
+## Debugging
 
-1. **Test your quoting first**:
-   ```bash
-   echo --param='"your value"'
-   # Should output exactly: --param="your value"
-   ```
-
-2. **Check parameter parsing**:
-   ```bash
-   ./run-prompt.sh ask --template=hi --model=gemini/gemini-2.0-flash --your-param
-   # Look at "Parameters: X custom parameters" in output
-   ```
-
-3. **Check template replacement**:
-   ```bash
-   # Look at "=== PROCESSED TEMPLATE CONTENT ===" in execution log
-   cat ~/.vibe-tools-square/output/[timestamp]_execution.log
-   ```
-
-## How Special Characters Are Handled
-
-1. **In Templates**: All special characters are preserved exactly as written
-2. **In Parameters**: Characters are processed by the shell first, then passed to our script
-3. **During Replacement**: Our script uses direct string replacement, preserving all characters
-4. **During Execution**: Our script uses proven shell escaping (`'\''` technique for single quotes)
-
-## Template Example
-
-```
-Hi this is a template for testing special characters.
-
-Variables:
-- STRING1: {{STRING1}}
-- STRING2: {{STRING2}}  
-- STRING3: {{STRING3}}
-- STRING4: {{STRING4}}
-
-All characters are preserved exactly.
+### Test Parameter Quoting
+```bash
+# Test your quoting before using in commands
+echo --param='"your value"'  # Should output: --param="your value"
+echo --param="'single quoted'"  # Should output: --param='single quoted'
+echo --param='`backtick value`'  # Should output: --param=`backtick value`
 ```
 
-Use this template with the working examples above to test your parameter escaping.
+### Check Parameter Processing
+```bash
+# Use dry-run mode to see how parameters are processed
+./run-prompt.sh ask --template=hello --model=gemini/gemini-2.0-flash --test-param="your value"
+# Look for "Parameters: X custom parameters" in output
 
-## Shell Escaping Summary
+# Check what command gets constructed
+./run-prompt.sh ask --prompt="test" --model=gemini/gemini-2.0-flash --special-chars='"quotes and $vars"'
+```
 
-The system handles shell escaping automatically using the proven legacy technique:
-- Single quotes in content are escaped as `'\''`
-- All other characters are protected by single quote wrapping
-- No additional escaping needed by the user
+### Verify Template Replacement
+```bash
+# Check execution logs for template processing
+cat ~/.vibe-tools-square/output/[timestamp]_execution.log
+# Look for "=== PROCESSED TEMPLATE CONTENT ===" section
+
+# Check logs directory for detailed output
+ls -la ~/.vibe-tools-square/logs/
+```
+
+## Character Handling
+
+- **Templates**: All special characters preserved exactly
+- **Parameters**: Shell processes first, then passed to script
+- **Replacement**: Direct string replacement preserves all characters  
+- **Execution**: Automatic shell escaping using proven `'\''` technique
 
 ## Common Mistakes
 
-1. **Wrong placeholder case**: Use `{{STRING1}}` in templates, not `{{string1}}`
-2. **Unquoted special characters**: Always quote parameters containing special characters
-3. **Wrong quote type**: Use single quotes for double quotes, double quotes for single quotes
-4. **Unescaped backticks**: Always escape or quote backticks to prevent command execution
-5. **Variable expansion confusion**: Know when you want `$USER` expanded vs literal `$USER`
+1. Wrong placeholder case: Use `{{STRING1}}`, not `{{string1}}`
+2. Unquoted special characters: Always quote parameters with special characters
+3. Wrong quote type: Use single quotes for double quotes, double quotes for single quotes
+4. Unescaped backticks: Always escape or quote backticks to prevent command execution
+5. Variable expansion confusion: Know when you want `$USER` expanded vs literal `$USER`

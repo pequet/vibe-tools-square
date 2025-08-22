@@ -42,7 +42,7 @@ Additional example tasks are also provided to demonstrate various configurations
 - Model and provider presets  
 - Context curation presets (include/exclude patterns)
 - Template variable injection
-- Only ask, repo, plan are implemented (web, doc, browser, youtube could be added fairly easily down the line)
+- Only `ask`, `repo`, `plan` are implemented (`web`, `doc`, `browser`, `youtube` could be added fairly easily down the line)
 
 **Out of Scope:**
 - **Multi-step workflows** - Tasks execute single vibe-tools commands only
@@ -68,8 +68,8 @@ See the various `.conf` files in this directory for examples of different task t
 
 To override the default "ask" task:
 
-1. Copy: `cp assets/.vibe-tools-square/tasks/ask.conf ~/.vibe-tools-square/tasks/`
-2. Edit: Modify `~/.vibe-tools-square/tasks/ask.conf` with your customizations
+1. Copy: `cp assets/.vibe-tools-square/tasks/ask-demo.conf ~/.vibe-tools-square/tasks/`
+2. Edit: Modify `~/.vibe-tools-square/tasks/ask-demo.conf` with your customizations
 3. Use: Your version will take precedence over the repo version
 
 ## Development Workflow

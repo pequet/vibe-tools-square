@@ -38,9 +38,8 @@ set -o pipefail
 #   -h, --help      Show this help message and exit
 #
 # Dependencies:
-#   - bash 4.0+ (for associative arrays and modern features)
-#   - cp command (for file copying)
-#   - sudo (only if installing global command)
+#   - rsync (for context management in repo/plan commands)
+#   - vibe-tools (for AI interactions, must be installed globally)
 #
 # Changelog:
 #   1.0.0 - 2025-08-14 - Initial release with modular architecture
@@ -54,6 +53,7 @@ INSTALL_SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && 
 PROJECT_ROOT="$(dirname "$INSTALL_SCRIPT_DIR")"
 RUNTIME_HOME="$HOME/.vibe-tools-square"
 UPDATE_MODE=false
+GLOBAL_COMMAND_PREFIX=""  # Will be loaded from config
 
 # --- Source Utilities ---
 # Source the proper utility libraries from src/utils/
@@ -66,6 +66,38 @@ LOG_FILE_PATH="${INSTALL_SCRIPT_DIR}/../logs/install.log"
 ensure_log_directory
 
 # *
+# * Configuration Loading
+# *
+
+load_configuration() {
+    print_step "Loading configuration..."
+    
+    local default_conf_path="$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf"
+    
+    if [[ -f "$default_conf_path" ]]; then
+        # Source the configuration file to load variables
+        if source "$default_conf_path"; then
+            print_info "Loaded configuration from default.conf"
+            # Validate that GLOBAL_COMMAND_PREFIX was loaded
+            if [[ -n "$GLOBAL_COMMAND_PREFIX" ]]; then
+                print_info "Global command prefix: $GLOBAL_COMMAND_PREFIX"
+            else
+                print_error "GLOBAL_COMMAND_PREFIX not found in default.conf"
+                print_error "Please add GLOBAL_COMMAND_PREFIX=\"your-prefix\" to default.conf"
+                exit 1
+            fi
+        else
+            print_error "Failed to source default.conf"
+            exit 1
+        fi
+    else
+        print_error "default.conf not found at: $default_conf_path"
+        print_error "Configuration file is required for installation"
+        exit 1
+    fi
+}
+
+# *
 # * Installation Logic
 # *
 
@@ -74,21 +106,26 @@ verify_dependencies() {
     
     local missing_deps=()
     
-    if ! command -v cp >/dev/null 2>&1; then
-        missing_deps+=("cp")
+    if ! command -v rsync >/dev/null 2>&1; then
+        missing_deps+=("rsync")
     fi
     
-    if ! command -v bash >/dev/null 2>&1; then
-        missing_deps+=("bash")
+    if ! command -v vibe-tools >/dev/null 2>&1; then
+        missing_deps+=("vibe-tools")
     fi
     
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         print_error "Missing required dependencies: ${missing_deps[*]}"
-        print_error "Please install the missing dependencies and try again"
+        if [[ " ${missing_deps[*]} " =~ " vibe-tools " ]]; then
+            print_error "Install vibe-tools: npm install -g vibe-tools"
+        fi
+        if [[ " ${missing_deps[*]} " =~ " rsync " ]]; then
+            print_error "rsync is required for repo/plan context management"
+        fi
         exit 1
     fi
     
-    print_success "All dependencies found"
+    # print_success "All dependencies found"
 }
 
 verify_source_files() {
@@ -114,7 +151,7 @@ verify_source_files() {
         fi
     done
     
-    print_success "All source files found"
+    # print_success "All source files found"
 }
 
 create_runtime_environment() {
@@ -190,29 +227,38 @@ setup_content_directory() {
         print_warning ".repomixignore not found in assets for content directory"
     fi
     
-    # Install vibe-tools in the content directory (fresh install only)
+    # Optionally install vibe-tools in the content directory
     if [[ "$UPDATE_MODE" == true ]]; then
         print_info "Skipping vibe-tools installation (update mode)"
     else
-        print_step "Installing vibe-tools in content directory..."
-        if command -v vibe-tools >/dev/null 2>&1; then
-            cd "$RUNTIME_HOME/content"
-            if ! vibe-tools install . >/dev/null 2>&1; then
-                print_error "Failed to install vibe-tools in content directory"
-                print_error "Make sure vibe-tools is installed globally and working"
-                cd - >/dev/null
+        print_info ""
+        
+        response=$(get_input "Install vibe-tools locally in content directory? (y/N)")
+        
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            print_step "Installing vibe-tools in content directory..."
+            if command -v vibe-tools >/dev/null 2>&1; then
+                cd "$RUNTIME_HOME/content"
+                print_info "Running: vibe-tools install ."
+                if ! vibe-tools install .; then
+                    print_error "Failed to install vibe-tools in content directory"
+                    print_error "Make sure vibe-tools is installed globally and working"
+                    cd - 
+                    exit 1
+                fi
+                cd - 
+                # print_success "vibe-tools installed in content directory"
+            else
+                print_error "vibe-tools command not found"
+                print_error "Please install vibe-tools globally first: npm install -g vibe-tools"
                 exit 1
             fi
-            cd - >/dev/null
-            print_success "vibe-tools installed in content directory"
         else
-            print_error "vibe-tools command not found"
-            print_error "Please install vibe-tools globally first: npm install -g vibe-tools"
-            exit 1
+            print_info "Skipping local vibe-tools installation - using global installation"
         fi
     fi
     
-    print_success "Isolated Context Environment setup complete"
+    # print_success "Isolated Context Environment setup complete"
 }
 
 install_configuration() {
@@ -220,18 +266,6 @@ install_configuration() {
 
     # Copy essential configuration files
     print_info ".conf files will be discovered dynamically from assets (runtime precedence)"
-
-    # # Copy default.conf from assets
-    # if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/default.conf" "$RUNTIME_HOME/config/"; then
-    #     print_error "Failed to copy default.conf"
-    #     exit 1
-    # fi
-    
-    # # Copy providers.conf from assets
-    # if ! cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/providers.conf" "$RUNTIME_HOME/config/"; then
-    #     print_error "Failed to copy providers.conf"
-    #     exit 1
-    # fi
 
     # Create task directory structure with README only (dynamic discovery handles assets)
     print_step "Creating task directory structure..."
@@ -254,7 +288,7 @@ install_configuration() {
         print_warning "Templates README not found in assets"
     fi
     
-    print_success "Configuration structure setup complete"
+    # print_success "Configuration structure setup complete"
 }
 
 prompt_global_installation() {
@@ -264,16 +298,21 @@ prompt_global_installation() {
     fi
     
     print_info ""
-    print_info "Installation complete! The run-prompt.sh script is available locally at:"
-    print_info "  $PROJECT_ROOT/run-prompt.sh"
-    print_info ""
     response=$(get_input "Would you like to make 'run-prompt.sh' available globally? (y/N)")
     
     if [[ "$response" =~ ^[Yy]$ ]]; then
+        # Prompt for prefix customization
+        print_info ""
+        print_info "Global command will be installed as: ${GLOBAL_COMMAND_PREFIX}-run-prompt.sh"
+        prefix_response=$(get_input "Enter custom prefix (or press Enter for '${GLOBAL_COMMAND_PREFIX}')")
+        if [[ -n "$prefix_response" ]]; then
+            GLOBAL_COMMAND_PREFIX="$prefix_response"
+            print_info "Using custom prefix: $GLOBAL_COMMAND_PREFIX"
+        fi
+        
         install_global_script
     else
         print_info "Global installation skipped. You can install globally later by re-running this script."
-        print_info "For now, use: $PROJECT_ROOT/run-prompt.sh <task-name> --template=..."
     fi
 }
 
@@ -281,7 +320,8 @@ install_global_script() {
     print_step "Installing global command..."
     
     local dest_dir="/usr/local/bin"
-    local dest_path="$dest_dir/run-prompt.sh"
+    local global_command_name="${GLOBAL_COMMAND_PREFIX}-run-prompt.sh"
+    local dest_path="$dest_dir/$global_command_name"
     
     if [[ ! -d "$dest_dir" ]]; then
         print_error "Global install directory not found: $dest_dir"
@@ -307,7 +347,7 @@ install_global_script() {
             print_error "You can still use the script locally: $PROJECT_ROOT/run-prompt.sh"
             return 1
         fi
-        print_success "Global command 'run-prompt.sh' available (symlink)"
+        # print_success "Global command '$global_command_name' available (symlink)"
     else
         # Custom location - create wrapper script
         print_step "Creating global wrapper script for custom location (may require sudo password)..."
@@ -332,10 +372,10 @@ exec \"$PROJECT_ROOT/run-prompt.sh\" \"\$@\"
             return 1
         fi
         
-        print_success "Global command 'run-prompt.sh' available (wrapper script)"
+        # print_success "Global command '$global_command_name' available (wrapper script)"
     fi
     
-    print_step "You can now use: run-prompt.sh <task-name> --template=..."
+    print_step "You can now use: $global_command_name <task-name> --template=..."
 }
 
 # *
@@ -403,6 +443,9 @@ main() {
         print_header "Installation Starting"
     fi
     
+    # Step 0: Load configuration
+    load_configuration
+    
     # Step 1: Verify dependencies
     verify_dependencies
     
@@ -422,7 +465,7 @@ main() {
     prompt_global_installation
     
     if [[ "$UPDATE_MODE" == true ]]; then
-        print_success "Update completed successfully!"
+        # print_success "Update completed successfully!"
         print_info ""
         print_info "Updated:"
         print_info "• Configuration files in: $RUNTIME_HOME/config/"
@@ -431,16 +474,20 @@ main() {
         print_info ""
         print_info "Note: Global command setup was not changed (update mode)"
     else
-        print_success "Installation completed successfully!"
+        # print_success "Installation completed successfully!"
+        print_info ""
+        print_info "The run-prompt.sh script is available locally at:"
+        print_info "  $PROJECT_ROOT/run-prompt.sh"
         print_info ""
         print_info "Next steps:"
         print_info "1. Review configuration in: $RUNTIME_HOME/config/"
-        print_info "2. Test the installation with: $PROJECT_ROOT/run-prompt.sh <task-name> --template=test"
-        if command -v run-prompt.sh >/dev/null 2>&1; then
-            print_info "3. Or use globally: run-prompt.sh <task-name> --template=test"
+        print_info "2. Test the installation with: $PROJECT_ROOT/run-prompt.sh --list-tasks"
+        local global_command_name="${GLOBAL_COMMAND_PREFIX}-run-prompt.sh"
+        if command -v "$global_command_name" >/dev/null 2>&1; then
+            print_info "3. Or use globally: $global_command_name --list-tasks"
         fi
         print_info ""
-        print_info "For testing commands, see: docs/testing-commands.md"
+        print_info "For testing commands, see: docs/100-Testing-Commands.md"
     fi
 }
 

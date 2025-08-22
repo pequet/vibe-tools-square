@@ -1,72 +1,90 @@
-# Using Placeholders in Configuration Files
+# Using Placeholders
 
-This guide explains how to use the placeholder substitution system in task configuration files.
+Guide for template and configuration placeholder usage in `vibe-tools-square`.
 
-## Basic Usage
+## Placeholder System
 
-You can use placeholders in your task configuration files that will be replaced with values provided by the user at runtime.
+Placeholders use `{{PLACEHOLDER_NAME}}` format and are replaced with user-provided values at runtime.
 
-Placeholders use the format `{{PLACEHOLDER_NAME}}` and can be included in any parameter value in your configuration file.
+### Basic Example
 
-Example in a task configuration file (`hello.conf`):
-
+Configuration file (`code-review.conf`):
 ```bash
-# Task configuration with placeholders
-TASK_DEFAULT_PARAMS="--name=\"{{USER_NAME=Hello User}}\" --project=\"{{PROJECT_NAME=Hello World}}\""
+TASK_DEFAULT_PARAMS="--reviewer=\"{{REVIEWER_NAME=Jane Doe}}\" --project=\"{{PROJECT_NAME=Current Project}}\" --focus=\"{{REVIEW_FOCUS=security and performance}}\""
 ```
 
-When a user runs the command:
-
+Command:
 ```bash
-./run-prompt.sh hello --user-name="John"
+./run-prompt.sh code-review --reviewer-name="Jane Doe" --project-name="Payment API"
 ```
 
-The placeholder `{{USER_NAME}}` will be replaced with "John", while `{{PROJECT_NAME}}` will keep its default value.
+Result: `{{REVIEWER_NAME}}` becomes "Jane Doe", `{{PROJECT_NAME}}` becomes "Payment API", `{{REVIEW_FOCUS}}` keeps default "security and performance".
 
-## Special Placeholders
+## Built-in Placeholders
 
-The system includes some built-in placeholders that are always available:
+Always available:
+- `{{TODAY_DATE}}` - Current date (YYYY-MM-DD)
+- `{{TODAY_DATETIME}}` - Current date and time (YYYY-MM-DD HH:MM:SS)
 
-- `{{TODAY_DATE}}`: Current date in YYYY-MM-DD format
-- `{{TODAY_DATETIME}}`: Current date and time in YYYY-MM-DD HH:MM:SS format
+## Default Values
+
+Specify defaults using `{{PLACEHOLDER=default value}}` syntax:
+
+```bash
+TASK_DEFAULT_PARAMS="--developer=\"{{DEVELOPER_NAME=Team Lead}}\" --project=\"{{PROJECT_NAME=Main Application}}\" --priority=\"{{PRIORITY=medium}}\" --deadline=\"{{DEADLINE=end of sprint}}\""
+```
 
 ## File Content Injection
 
-You can also include file content as a parameter value using the `file:` prefix:
+Include file content using `file:` prefix:
 
 ```bash
-# Including file content
-TASK_DEFAULT_PARAMS="--documentation=file:README.md"
+TASK_DEFAULT_PARAMS="--requirements=\"file:docs/requirements.md\" --architecture=\"file:docs/architecture.md\" --current-status=\"file:CHANGELOG.md\""
 ```
 
-This will read the content of README.md and use it as the value for the `--documentation` parameter.
-
-## Default Values in Placeholders
-
-You can specify default values for placeholders that will be used if no override is provided:
-
-```bash
-# Using default values
-TASK_DEFAULT_PARAMS="--name=\"{{USER_NAME=Hello User}}\" --project=\"{{PROJECT_NAME=Hello World}}\""
-```
+Reads file content and injects it as parameter values. Supports multiple files and relative/absolute paths.
 
 ## Command Substitution
 
-The configuration system still supports command substitution for dynamic values:
+Dynamic values using shell command substitution:
 
 ```bash
-# Using command substitution
-TASK_DEFAULT_PARAMS="--output-file=\"output/$(date +%Y-%m-%d_%H%M)-report.md\""
+TASK_DEFAULT_PARAMS="--output-file=\"reports/$(date +%Y-%m-%d_%H%M)-analysis.md\" --build-number=\"$(git rev-parse --short HEAD)\" --branch=\"$(git branch --show-current)\""
 ```
 
-## Usage in Templates
+## Template Usage
 
-Placeholders can also be used in template files, not just in configuration parameters. The same substitution rules apply.
+Placeholders work in both configuration files and template files with identical substitution rules.
 
-## Example Command
+## Usage Example
 
 ```bash
-./run-prompt.sh hello --user-name="John" --project-name="MK-Ultra"
+./run-prompt.sh feature-analysis --developer-name="Jane Doe" --project-name="E-commerce Platform" --feature="payment processing" --priority="critical"
 ```
 
-This will substitute `{{USER_NAME}}` with "John" and `{{PROJECT_NAME}}` with "MK-Ultra" in the task configuration before execution.
+Substitutes `{{DEVELOPER_NAME}}` → "Jane Doe", `{{PROJECT_NAME}}` → "E-commerce Platform", `{{FEATURE}}` → "payment processing", and `{{PRIORITY}}` → "critical" before execution.
+
+## Advanced Examples
+
+### Multiple File Injection
+```bash
+TASK_DEFAULT_PARAMS="--context=\"file:docs/requirements.md,docs/technical-specs.md,CHANGELOG.md\""
+```
+
+### Combined Placeholders and File Injection
+```bash
+TASK_DEFAULT_PARAMS="--developer=\"{{DEVELOPER_NAME=Jane Doe}}\" --specs=\"file:{{SPEC_FILE=docs/specs.md}}\" --deadline=\"{{DEADLINE=end of sprint}}\""
+```
+
+### Dynamic Output Paths
+```bash
+TASK_DEFAULT_PARAMS="--output-file=\"reports/{{PROJECT_NAME}}/$(date +%Y-%m-%d_%H%M)-analysis.md\""
+```
+
+## Best Practices
+
+- **Descriptive Names**: Use clear placeholder names (`PROJECT_DESCRIPTION` not `VAR1`)
+- **Provide Defaults**: Include default values for optional parameters
+- **File Path Safety**: Verify file paths exist before using `file:` injection
+- **Escape Special Characters**: Follow special character guidelines for parameter values
+- **Test Templates**: Use dry-run mode to verify placeholder replacement works correctly

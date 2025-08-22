@@ -16,20 +16,34 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 #   It handles command-line argument parsing, configuration loading, and execution flow.
 #
 # Usage:
-#   ./run-prompt.sh <task> [options] [arguments]
-#   ./run-prompt.sh ask --template=question "What is the capital of France?"
-#   ./run-prompt.sh plan --template=strategy "Build a user authentication system"
+#   ./run-prompt.sh <task-name> [options]
+#   ./run-prompt.sh ask --prompt="What is dependency injection?" --go
+#   ./run-prompt.sh repo --prompt="Review this code" --include="src/" --go
+#   ./run-prompt.sh plan --prompt="Add authentication" --include="src/,config/" --go
 #
 # Options:
-#   --template=<name>   Specify template to use for prompt construction
-#   --model=<provider/model>   Specify AI model to use
-#   --include=<pattern>  Include file pattern for context
-#   --exclude=<pattern>  Exclude file pattern from context
-#   -h, --help          Show help message and exit
+#   --prompt=<text|file:path>    Direct prompt text or file reference 
+#   --template=<name>            Template to use for the task
+#   --model=<alias>              Model alias from providers.conf (e.g., gemini/gemini-2-5-flash)
+#   --file-model=<alias>         File analysis model for plan tasks (default: gemini/gemini-2-0-flash)
+#   --thinking-model=<alias>     Plan generation model for plan tasks (default: gemini/gemini-2-5-flash)
+#   --include=<pattern>          Include file pattern for repo/plan context
+#   --exclude=<pattern>          Exclude file pattern from repo/plan context
+#   --max-tokens=<num>           Set maximum response tokens
+#   --output-file=<path>         Save output to specific file
+#   --list-tasks                 Show available tasks
+#   --show-context               Show current curated context files
+#   --go                         Execute command (default is dry-run)
+#   --help                       Show help message and exit
+#
+# Plan Task Dual Models:
+#   Plan tasks use two models: --file-model (analyzes files) and --thinking-model (generates plan)
+#   Example: run-prompt.sh plan-demo --file-model=gemini/gemini-2-0-flash --thinking-model=openai/o3-mini
+#
 #
 # Dependencies:
-#   - vibe-tools CLI (for AI model access)
-#   - bash 4.0+ (for associative arrays)
+#   - vibe-tools (for AI model access, must be installed globally)
+#   - rsync (for context management in repo/plan commands)
 #
 # Changelog:
 # 1.0.0 - 2025-08-14 - Initial release with modular architecture

@@ -33,6 +33,18 @@ core_main() {
         exit 0
     fi
     
+    # Handle help flags
+    if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+        show_usage
+        exit 0
+    fi
+    
+    # Handle context display flag
+    if [[ "${1:-}" == "--show-context" ]]; then
+        show_context
+        exit 0
+    fi
+    
     local task_name="$1"
     shift
     
@@ -548,8 +560,10 @@ resolve_task_model() {
             model="${resolved#*|}"
             print_info "Resolved $provider/$model to provider='$provider' model='$model'"
         else
-            # No mapping found - use values as-is
-            print_info "No provider mapping found for $provider/$model - using direct values"
+            print_error "Provider/model mapping failed for: $provider/$model"
+            print_error "See the list of available aliases in providers.conf."
+            print_error "Use format: --model=provider_alias/model_alias (e.g., --model=gemini/free)"
+            exit 1
         fi
     elif [[ -z "$provider" ]]; then
         # No provider specified, use model as-is
@@ -582,30 +596,26 @@ resolve_plan_task_models() {
     if [[ "$file_model" == */* ]]; then
         local resolved
         if ! resolved=$(resolve_provider_model "$file_model"); then
-            # Fallback: pass through provider/model as-is
-            file_provider="${file_model%%/*}"
-            file_model="${file_model#*/}"
-            print_warning "File provider/model mapping not found. Using pass-through: provider='$file_provider' model='$file_model'"
-        else
-            file_provider="${resolved%%|*}"
-            file_model="${resolved#*|}"
-            print_info "Resolved file model $1 to provider='$file_provider' model='$file_model'"
+            print_error "File model/provider mapping failed for: $file_model"
+            print_error "Available aliases in providers.conf: anthropic/claude-3-5-sonnet, gemini/gemini-2-0-flash, openai/o3-mini, etc."
+            exit 1
         fi
+        file_provider="${resolved%%|*}"
+        file_model="${resolved#*|}"
+        print_info "Resolved file model $1 to provider='$file_provider' model='$file_model'"
     fi
     
     # Resolve thinking model
     if [[ "$thinking_model" == */* ]]; then
         local resolved2
         if ! resolved2=$(resolve_provider_model "$thinking_model"); then
-            # Fallback: pass through provider/model as-is
-            thinking_provider="${thinking_model%%/*}"
-            thinking_model="${thinking_model#*/}"
-            print_warning "Thinking provider/model mapping not found. Using pass-through: provider='$thinking_provider' model='$thinking_model'"
-        else
-            thinking_provider="${resolved2%%|*}"
-            thinking_model="${resolved2#*|}"
-            print_info "Resolved thinking model $3 to provider='$thinking_provider' model='$thinking_model'"
+            print_error "Thinking model/provider mapping failed for: $thinking_model"
+            print_error "Available aliases in providers.conf: anthropic/claude-3-5-sonnet, gemini/gemini-2-0-flash, openai/o3-mini, etc."
+            exit 1
         fi
+        thinking_provider="${resolved2%%|*}"
+        thinking_model="${resolved2#*|}"
+        print_info "Resolved thinking model $3 to provider='$thinking_provider' model='$thinking_model'"
     fi
     
     # Return resolved values via global variables
@@ -653,10 +663,22 @@ build_vibe_command_args() {
     else
         # Default output to ~/.vibe-tools-square/output/ with timestamp
         local timestamp=$(date +%Y-%m-%d_%H%M%S)
-        local task_type="$vibe_cmd"
-        if [[ -n "$template_name" && "$template_name" != "repo-prompt" ]]; then
-            task_type="${vibe_cmd}_${template_name}"
+        local task_type=""
+        
+        # Determine task type based on template and TASK_OUTPUT_PREFIX
+        if [[ -n "$template_name" && "$template_name" != "repo-prompt" && "$template_name" != "plan-prompt" ]]; then
+            # Template-based task: use TASK_OUTPUT_PREFIX if available, otherwise template name
+            if [[ -n "${TASK_OUTPUT_PREFIX:-}" ]]; then
+                task_type="$TASK_OUTPUT_PREFIX"
+            else
+                task_type="$template_name"
+            fi
+        else
+            # Basic task: use [task]_prompt pattern - extract task name from vibe_cmd
+            local basic_task="${vibe_cmd##* }"  # Extract last word (e.g., "ask" from "vibe-tools ask")
+            task_type="${basic_task}_prompt"
         fi
+        
         local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_${task_type}.md"
         ensure_output_directory
         vibe_args+=("--save-to=$default_output")
@@ -696,7 +718,16 @@ build_plan_command_args() {
     else
         # Default output to ~/.vibe-tools-square/output/ with timestamp
         local timestamp=$(date +%Y-%m-%d_%H%M%S)
-        local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_plan.md"
+        local task_type=""
+        
+        # Determine task type - for plan, check if we have TASK_OUTPUT_PREFIX (template-based) or not (basic)
+        if [[ -n "${TASK_OUTPUT_PREFIX:-}" ]]; then
+            task_type="$TASK_OUTPUT_PREFIX"
+        else
+            task_type="plan_prompt"
+        fi
+        
+        local default_output="$VIBE_TOOLS_SQUARE_HOME/output/${timestamp}_${task_type}.md"
         ensure_output_directory
         vibe_args+=("--save-to=$default_output")
         output_file="$default_output"  # Set for later reference
@@ -718,15 +749,27 @@ create_execution_log() {
     local go_flag="$7"
     local processed_content="$8"
     local vibe_cmd="$9"
-    shift 9
+    local ice_context_info="${10:-}"  # Optional ICE context info
+    shift 10
     local params=("$@")
     local vibe_args=("${BUILT_VIBE_ARGS[@]}")  # Use the global from build_vibe_command_args
     
     # Create execution log file
     local log_timestamp=$(date +%Y-%m-%d_%H%M%S)
-    local log_task_type="ask"
-    if [[ -n "$template_name" ]]; then
-        log_task_type="ask_${template_name}"
+    local log_task_type=""
+    
+    # Determine log task type based on template and TASK_OUTPUT_PREFIX
+    if [[ -n "$template_name" && "$template_name" != "repo-prompt" && "$template_name" != "plan-prompt" ]]; then
+        # Template-based task: use TASK_OUTPUT_PREFIX if available, otherwise template name
+        if [[ -n "${TASK_OUTPUT_PREFIX:-}" ]]; then
+            log_task_type="$TASK_OUTPUT_PREFIX"
+        else
+            log_task_type="$template_name"
+        fi
+    else
+        # Basic task: use [task]_prompt pattern - extract task name from vibe command
+        local basic_task="${vibe_cmd##* }"  # Extract last word (e.g., "ask" from "vibe-tools ask")
+        log_task_type="${basic_task}_prompt"
     fi
     local log_file="$VIBE_TOOLS_SQUARE_HOME/output/${log_timestamp}_${log_task_type}_execution.log"
     
@@ -784,6 +827,14 @@ create_execution_log() {
         done
         echo "$display_cmd"
         echo ""
+        
+        # Add ICE context information for repo and plan tasks
+        if [[ -n "$ice_context_info" ]]; then
+            echo "=== CONTEXT FILES ==="
+            echo "$ice_context_info"
+            echo ""
+        fi
+        
         echo "=== PROCESSED TEMPLATE CONTENT ==="
         echo "$processed_content"
         echo ""
@@ -1018,9 +1069,7 @@ execute_task() {
     esac
 }
 
-### ARE THE execute_ask_task, execute_plan_task, execute_repo_task DIFFERENT ENOUGH TO JUSTIFY HAVING 3 COMPLETELY HARDCODED FUNCTIONS ###
-
-# Execute the ask task (Phase 1 implementation)
+# Execute the ask task 
 execute_ask_task() {
     # Parse parameters using helper function
     parse_ask_task_parameters "${TASK_TEMPLATE:-}" "$@"
@@ -1066,7 +1115,7 @@ execute_ask_task() {
     local full_command="$vibe_cmd \"$processed_content\" ${vibe_args[*]}"
     
     # Create comprehensive execution log using helper function
-    create_execution_log "$template_name" "$content_source" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$processed_content" "$vibe_cmd" "${params[@]+"${params[@]}"}"
+    create_execution_log "$template_name" "$content_source" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$processed_content" "$vibe_cmd" "" "${params[@]+"${params[@]}"}"
     local log_file="$EXECUTION_LOG_FILE"
     
     # Show execution plan for both dry run and live execution
@@ -1152,11 +1201,20 @@ execute_repo_task() {
     init_context
     prepare_ice "${includes[@]/#/--include=}" "${excludes[@]/#/--exclude=}"
     
+    # Capture ICE context information for logging
+    capture_ice_context
+    local ice_context="$ICE_CONTEXT_INFO"
+    
     # Build vibe-tools command using helper function
-    build_vibe_command_args "repo" "$model" "$provider" "$max_tokens" "$go_flag" "$output_file" "repo-prompt"
+    # Use template name for template-based tasks, otherwise use "repo-prompt"
+    local vibe_template_name="repo-prompt"
+    if [[ -n "$template_name" && "$template_name" != "repo-prompt" ]]; then
+        vibe_template_name="$template_name"
+    fi
+    build_vibe_command_args "repo" "$model" "$provider" "$max_tokens" "$go_flag" "$output_file" "$vibe_template_name"
     
     # Create comprehensive execution log using helper function
-    create_execution_log "repo-prompt" "prompt: $question" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$question" "vibe-tools repo" "${params[@]+"${params[@]}"}"
+    create_execution_log "$vibe_template_name" "prompt: $question" "$model" "$provider" "$max_tokens" "$output_file" "$go_flag" "$question" "vibe-tools repo" "$ice_context" "${params[@]+"${params[@]}"}"
     
     # Execute command using helper function
     execute_vibe_command "$go_flag" "$question" "vibe-tools repo" "$output_file" "$EXECUTION_LOG_FILE"
@@ -1215,6 +1273,10 @@ execute_plan_task() {
     init_context
     prepare_ice "${includes[@]/#/--include=}" "${excludes[@]/#/--exclude=}"
     
+    # Capture ICE context information for logging
+    capture_ice_context
+    local ice_context="$ICE_CONTEXT_INFO"
+    
     # Build vibe-tools plan command using helper function
     build_plan_command_args "$file_model" "$file_provider" "$thinking_model" "$thinking_provider" "$output_file"
     
@@ -1222,7 +1284,12 @@ execute_plan_task() {
     BUILT_VIBE_ARGS=("${BUILT_PLAN_ARGS[@]}")
     
     # Create comprehensive execution log using helper function
-    create_execution_log "plan-prompt" "prompt: $question" "$file_model" "$file_provider" "" "$output_file" "$go_flag" "$question" "vibe-tools plan" "${params[@]+"${params[@]}"}"
+    # Use template name for template-based tasks, otherwise use "plan-prompt"
+    local log_template_name="plan-prompt"
+    if [[ -n "$template_name" && "$template_name" != "plan-prompt" ]]; then
+        log_template_name="$template_name"
+    fi
+    create_execution_log "$log_template_name" "prompt: $question" "$file_model" "$file_provider" "" "$output_file" "$go_flag" "$question" "vibe-tools plan" "$ice_context" "${params[@]+"${params[@]}"}"
     
     # Execute command using helper function
     execute_vibe_command "$go_flag" "$question" "vibe-tools plan" "$FINAL_PLAN_OUTPUT_FILE" "$EXECUTION_LOG_FILE"
@@ -1395,22 +1462,47 @@ Usage: run-prompt.sh <task-name> [options]
 Options:
   --go                    Actually execute (default is dry run)
   --template=<name>       Template to use for the task
-    --preset=<alias>        Provider preset (e.g., gemini-free, openrouter-cheap)
-    --model=<provider/model>   Model for ask/repo (e.g., gemini/gemini-2-0-flash)
-    --file-model=<provider/model>      Model for file analysis (plan only)
-    --thinking-model=<provider/model>  Model for plan generation (plan only)
-  --include=<pattern>     Include files/dirs in context (for tasks using repo/plan)
-  --exclude=<pattern>     Exclude files/dirs from context (for tasks using repo/plan)
-  --show-context          Show what files are currently in the curated context
-  --output-file=<path>    Save output to specific file
-  --list-tasks            Show available tasks and their descriptions
-  --help                  Show this help
+  --prompt=<text|file:path>  Direct prompt text or file reference
+  
+  Model Selection (only aliases from providers.conf allowed):
+    --model=<alias>              Model for ask/repo tasks (e.g., gemini/gemini-2-0-flash)
+    --file-model=<alias>         File analysis model for plan tasks (default: gemini/gemini-2-0-flash)
+    --thinking-model=<alias>     Plan generation model for plan tasks (default: gemini/gemini-5-0-flash)
+  
+  Context Control (for repo/plan tasks):
+    --include=<pattern>     Include files/dirs in context analysis  
+    --exclude=<pattern>     Exclude files/dirs from context analysis
+    --show-context          Show what files are currently in the curated context
+  
+  Output Options:
+    --output-file=<path>    Save output to specific file (default: timestamped in ~/.vibe-tools-square/output/)
+    --max-tokens=<num>      Set maximum response tokens
+  
+  System:
+    --list-tasks            Show available tasks and their descriptions
+    --help                  Show this help
+
+Example Model Aliases (from providers.conf):
+  anthropic/claude-3-5-sonnet    # Anthropic Claude 3.5 Sonnet  
+  gemini/gemini-2-0-flash        # Google Gemini 2.0 Flash (free)
+  gemini/gemini-2-5-flash        # Google Gemini 2.5 Flash
+  gemini/gemini-2-5-pro          # Google Gemini 2.5 Pro  
+  openai/o3-mini                 # OpenAI o3-mini
+  openrouter/gemini-2-5-flash    # Gemini 2.5 Flash via OpenRouter
+  perplexity/sonar               # Perplexity Sonar Pro
+
+Plan Task Dual Models:
+  Plan tasks use TWO models:
+  1. --file-model: Analyzes repository files and context
+  2. --thinking-model: Generates the actual implementation plan
+  
+  Example: run-prompt.sh plan-demo --file-model=gemini/gemini-2-0-flash --thinking-model=openai/o3-mini --include=src
 
 Available Tasks:
 $(list_available_tasks)
 
-Note: Tasks are user-defined workflows that may use vibe-tools ask/repo/plan internally.
-For detailed documentation, see docs/testing-commands.md
+Note: Only aliases from providers.conf are allowed to prevent accidental expensive model usage.
+For detailed documentation, see docs/100-Testing-Commands.md
 EOF
 }
 

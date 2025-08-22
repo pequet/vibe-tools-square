@@ -31,10 +31,15 @@ VENV/
 # Should be commented out i.e. included in the boilerplate but **usually not** in the project
 .cursor  # Uncommented by [core-privatize-folders]
 .github  # Uncommented by [core-privatize-folders]
+.claude  # Uncommented by [core-privatize-folders]
 # .vscode
 .cursor/  # Uncommented by [core-privatize-folders]
 .github/  # Uncommented by [core-privatize-folders]
+.claude/  # Uncommented by [core-privatize-folders]
 # .vscode/
+
+# Caude
+CLAUDE.md
 
 # Build artifacts
 dist/
@@ -75,5 +80,5 @@ logs/
 
 # Memory Bank 
 # Should be commented out i.e. included in the boilerplate but **usually not** in the project
-memory-bank
+memory-bank  # Uncommented by [core-privatize-folders]
 memory-bank/  # Uncommented by [core-privatize-folders]

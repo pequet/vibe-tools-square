@@ -192,16 +192,28 @@ show_context() {
     fi
     
     print_info "=== CURATED CONTEXT LISTING ==="
+    
+    # Count files
     if command -v find >/dev/null 2>&1; then
         local count
         count=$(find "$target_public" -type f | wc -l | tr -d ' ')
         print_info "Total files: $count"
         print_info ""
-        if [[ "$count" != "0" ]]; then
-            print_info "Files in curated context:"
-            find "$target_public" -type f | sed "s|^$target_public/||" | sort
-        else
+        
+        if [[ "$count" == "0" ]]; then
             print_info "No files in curated context."
+            return 0
+        fi
+        
+        # Always show flat list first for easy copying of paths
+        find "$target_public" -type f | sed "s|^$target_public/||" | sort
+        
+        print_info ""
+        
+        # Check if tree command is available for visual representation
+        if command -v tree >/dev/null 2>&1; then
+            # Use tree with path argument and prune the full path prefix
+            tree -C -F --noreport "$target_public" | sed "1s|$target_public|.|"
         fi
     fi
 }
@@ -212,4 +224,39 @@ init_context() {
     ensure_directory "$VIBE_TOOLS_SQUARE_HOME/content"
     ensure_directory "$VIBE_TOOLS_SQUARE_HOME/content/public"
     print_info "Context system initialized"
+}
+
+# Capture ICE context information for logging
+capture_ice_context() {
+    local target_public="$VIBE_TOOLS_SQUARE_HOME/content/public"
+    local context_info=""
+    
+    if [[ ! -d "$target_public" ]]; then
+        context_info="ICE public directory doesn't exist: $target_public"
+    else
+        if command -v find >/dev/null 2>&1; then
+            local count
+            count=$(find "$target_public" -type f | wc -l | tr -d ' ')
+            
+            if [[ "$count" == "0" ]]; then
+                context_info="No files in ICE context"
+            else
+                context_info="Total files in ICE: $count"$'\n'
+                context_info+="Files included in context:"$'\n'
+                while IFS= read -r file; do
+                    local relative_path="${file#$target_public/}"
+                    local size=""
+                    if command -v du >/dev/null 2>&1; then
+                        size=" ($(du -h "$file" | cut -f1))"
+                    fi
+                    context_info+="  $relative_path$size"$'\n'
+                done < <(find "$target_public" -type f | sort)
+            fi
+        else
+            context_info="find command not available - cannot list ICE contents"
+        fi
+    fi
+    
+    # Return via global variable
+    ICE_CONTEXT_INFO="$context_info"
 }

@@ -25,7 +25,7 @@ globs: *
 
 ## DEBUGGING
 
-*   **CRITICAL:** During testing, only use `gemini` and `gemini-2.0-flash` models to avoid incurring excessive costs. 
+*   **CRITICAL:** During testing, only use `gemini` and `gemini-2.0-flash` models to avoid incurring excessive costs.
 
 ## WORKFLOW & RELEASE RULES
 
@@ -104,6 +104,42 @@ globs: *
 
 ### Run Prompt Script
 
+### README.md Overhaul Rules
+
+*   The main `README.md` must be a clear, actionable, and engaging entry point for new users.
+*   **Introduction and Purpose:** The initial sections of `README.md` must clearly state what the tool does, its core value proposition, and why it exists, following the "HELPFUL", "EFFICIENT", and "DIRECT" principles from `.github/instructions/250-writing-style.instructions.md`. The introduction must be direct about the tool itself before diving into AI boilerplate.
+*   **Prerequisites and Installation:**
+    *   The "Requirements" section of `README.md` must be consolidated and clarified.
+    *   Explicit instructions on how to install `vibe-tools` globally, including the `npm install -g vibe-tools` command, must be provided.
+    *   The "Getting Started" section must clearly use `scripts/install.sh` as the primary method, removing manual copy-paste instructions.
+    *   The `scripts/install.sh` usage must be consistent with `README.md`.
+*   **How to Use and Tutorial:**
+    *   A new section titled "How to Use" or "Quick Start Guide" must be added to `README.md`.
+    *   The existing "Script Usage Example" must be expanded into a more comprehensive tutorial.
+    *   Demonstrate basic usage with placeholder substitution, including the `Hello World` template.
+    *   Show how to use `--list-tasks`.
+    *   Explain the `--go` flag and the dry-run behavior.
+*   **Links/Attribution:**
+    *   All internal and external links in `README.md` must be correct and functional.
+    *   The "Support the Project" section must match the standard defined in `.github/instructions/290-script-attribution-standards.instructions.md`.
+    *   The "Integration with the Core Framework" and "Advanced Usage: Private Context" sections must be removed or rephrased if they are overly specific to an internal framework setup and not generally applicable to a public tool.
+    *   The "Integration with the Core Framework" section must accurately reflect the tool's capabilities. If the tool does not directly support memory bank systems or IDE integration, this must be removed. The description should focus on workflow automation through template-driven consistency.
+*   **Core Value Proposition:** The `README.md` must clearly demonstrate the transformation from repetitive manual workflows to structured, template-driven approaches.
+
+*   **Task Type Explanations:** Add a dedicated section titled "The Three Modes of Thinking: Ask vs. Repo vs. Plan" that explains the distinct roles:
+    *   **Ask (The Interrogator):** For stateless, context-in-prompt queries.
+    *   **Repo (The Code Archaeologist):** For analyzing and answering questions about a specific codebase context.
+    *   **Plan (The Project Architect):** For generating strategic plans based on codebase analysis, using a dual-model approach.
+*   **Quick Start Guide Commands:** The "Quick Start" section should present commands clearly, grouped by the demo task, showing both a default run and a customized run.
+    *   Refer the user to each of the demo tasks instead of repeating all the queries in the README. The repeated queries are unhelpful and waste space.
+    *   The explanation of the `--go` flag does not need a code block; just mention that it's a dry run by default.
+*   **Be Consistent:** Ensure consistent descriptions for the basic tasks (ask, repo, plan) and demo tasks (ask-demo, repo-demo, plan-demo). All demo tasks are demonstrations.
+*   **Correct Task Understanding:** Ensure that `ask` is used for general AI queries, `repo` for codebase-specific questions, and `plan` for structured planning tasks. Do not use `ask` to analyze the codebase; use `repo` for that purpose.
+*   **Useful Automation Examples**: The `README.md` should include examples of real utility, showing realistic automation scenarios, such as processing meeting transcripts, conducting security reviews with different modules, and planning deployments for different services. Each example should demonstrate variable content that changes between runs.
+*   **Template Placeholders**: The examples in `README.md` should show actual useful automation patterns instead of one-off questions. The examples should show template placeholders (e.g., `{{TRANSCRIPT}}`, `{{MODULE}}`, `{{SERVICE}}`) that would vary.
+*   **Simplified Quick Start**: The `README.md`'s "Quick Start" section should point users to the actual demo files and configurations, explaining where to find the real learning materials (task configs and templates) and giving simple instructions to explore the demos themselves. The useless command examples that don't teach anything should be removed.
+*   The README should focus on the real value proposition: automating workflows where the **pattern stays the same** but the **content changes** - exactly what a template engine should do. Users can explore the actual demo configurations to understand how to build their own useful templates.
+
 ### Testing Commands
 
 *Example Usage*
@@ -164,7 +200,7 @@ globs: *
 
 ### Corrected Directory Creation Logic
 *   The system must only create directories when they are needed for writing, not for reading. This applies to both the configuration directory and the logs directory.
-*   The system must check if a directory exists before attempting to write to it, and create the directory if it does not exist.
+*   The system must check if a directory exists before attempting to it, and create the directory if it does not exist.
 *   The `ensure_log_directory` function from `#file:logging_utils.sh` must be used to ensure the log directory exists before writing to it.
 
 ### Displaying Configuration and Log File Usage
@@ -207,32 +243,53 @@ globs: *
 *   The configuration files should define parameters using the `PARAM_` prefix, not `TASK_DEFAULT_PARAMS`.
 *   For all three simple tasks (ask, plan, repo), use a generic prompt related to the task type instead of a specific example. For example, for repo, use `Explain what this repository is about`.
 
-### Testing Commands
+### Updating Dependencies and Scripts
 
-```bash
-# ============================================
-# TESTING PROMPT-BASED TASKS (BASIC VERSIONS)
-# ============================================
+*   `#file:install.sh`: The dependency on bash 4 is incorrect. The script should work on macOS with bash 3. Remove `CP` and `sudo` from the dependency list. `rsync` is a dependency for the `plan` and `repo`-based commands.
+*   `#file:run-prompt.sh`: Remove bash from the dependency list. Add `rsync` as a dependency. The usage and options information is outdated and needs to be fixed. The script should not mention the templates and demo tasks.
 
-# Test the basic 'ask' task
-./run-prompt.sh ask --prompt="What are the main features of JavaScript ES6?" --go
+### Examples and Demos
 
-# Test the basic 'repo' task
-./run-prompt.sh repo --prompt="Explain what this repository is about" --include="README.md,src/" --go
+*   The `ask` task usage should be for summarizing transcripts, not for asking general questions that can be googled.
+*   The `repo` and `plan` tasks should be used for questions that the user would typically ask repeatedly about different repositories or the inbox.
+*   The `README.md` should point the user to the demo files instead of giving the commands for the demos.
+*   The examples need to demonstrate something useful, not something dumb.
 
-# Test the basic 'plan' task
-./run-prompt.sh plan --prompt="Create a plan for adding user authentication" --include="src/,README.md" --go
+### Run Prompt Script Parameters
 
-# ============================================
-# TESTING TEMPLATE-BASED TASKS (DEMO VERSIONS)
-# ============================================
+*   When using `run-prompt.sh`, the `--include` parameter is used to specify files and directories to include.
+*   Before the `--go` flag, variables can be injected into the execution. 99% of the time, variables will be injected instead of the placeholders.
 
-# Test the 'ask-demo' task (project briefing)
-./run-prompt.sh ask-demo --project-name="Vibe Tools Square" --user-role="Lead Developer" --domain="CLI Development" --tech-stack="Bash, JavaScript" --priority="High" --readme-path="README.md" --deadline="End of month" --go
+### What We're Building
 
-# Test the 'plan-demo' task (feature planning)
-./run-prompt.sh plan-demo --feature-name="OAuth Authentication" --complexity="High" --priority="Critical" --requirements-file="README.md" --architecture-file="README.md" --dependencies="Express, JWT, Passport" --timeline="3-week sprint" --team-size="2 developers" --target-audience="Enterprise users" --go
+*   **Powerful Simple CLI API**: Ugly but extremely flexible command-line interface for atomic AI operations.
+*   **Template + Placeholder Engine**: Keep and enhance the existing token replacement system.
+*   **Config-Driven Everything**: No hardcoded values, all settings come from config files.
+*   **Modular Architecture**: Break apart the monolith while preserving core functionality.
+*   **Provider Agnostic**: Seamless switching between AI providers via config presets.
+*   **Curated Context Engine**: For `repo` and `plan`-based commands, build a temporary, isolated context environment with only the explicitly required files to control context size and cost.
+*   **Atomic Operations**: Support for `ask`, `repo`, and `plan` commands only.
 
-# Test the 'repo-demo' task (code analysis)
-./run-prompt.sh repo-demo --include-patterns="src/,README.md" --exclude-patterns="node_modules/,test/" --focus="code maintainability" --principles="SOLID, DRY" --language="Bash" --frameworks-file="README.md" --standards-file="README.md" --architecture="CLI Tool" --go
-```
+### Rsync
+
+*   `rsync` allows to dynamically include files and folders and exclude files and folders.
+*   The `repo` and `plan`-based commands use an `include` parameter that accepts comma-delimited files and folders and an `exclude` parameter that does the same.
+*   This allows to save context, tokens, and money.
+
+### Testing and Verifying Commands
+
+*   When testing commands, ensure the commands are tested sequentially.
+*   The goal is to provide a useful guide for the user with a set of commands that demonstrate how cool and useful the script is.
+*   The guide should include only tested, working commands.
+*   The guide should provide clear explanations of each command type (ask, repo, plan).
+*   The guide should organize examples by category for easy reference.
+*   The guide should maintain consistent command structure throughout examples, using `--prompt`, `--include`, and `--model` parameters.
+*   The guide should use realistic, useful prompts that demonstrate actual value.
+*   During testing, use `gemini` and `gemini-2.0-flash` models.
+*   The guide should include commands to check task configurations.
+*   The guide should include a comprehensive file selection guide.
+*   For plan-based commands:
+    *   Plan commands use a dual-model approach with separate models for file identification and thinking/planning.
+    *   It is possible to override just the thinking model with `--thinking-model="gemini/gemini-2.5-pro"`.
+    *   It is possible to override just the file model with `--file-model="gemini/gemini-2.0-flash"`.
+    *   It is possible to override both models with both parameters.
