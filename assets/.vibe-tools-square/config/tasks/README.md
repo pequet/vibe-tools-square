@@ -14,8 +14,8 @@ Task configuration files define:
 
 The system searches for tasks in this order:
 
-1. **Runtime tasks**: `~/.vibe-tools-square/tasks/` (this directory when copied to runtime)
-2. **Repo tasks**: `assets/.vibe-tools-square/tasks/` (fallback)
+1. **Runtime tasks**: `~/.vibe-tools-square/config/tasks/` (this directory when copied to runtime)
+2. **Repo tasks**: `assets/.vibe-tools-square/config/tasks/` (fallback)
 
 This allows you to:
 - Override default tasks by placing custom versions in your runtime directory
@@ -49,7 +49,7 @@ Additional example tasks are also provided to demonstrate various configurations
 
 ## Creating Custom Tasks
 
-1. Create a `.conf` file in `~/.vibe-tools-square/tasks/` (e.g., `my-task.conf`)
+1. Create a `.conf` file in `~/.vibe-tools-square/config/tasks/` (e.g., `my-task.conf`)
 2. Study the example task configurations in this assets directory for reference
 3. Define your task using the same parameter structure as the examples
 4. Use with: `./run-prompt.sh my-task [additional-options]`
@@ -68,8 +68,8 @@ See the various `.conf` files in this directory for examples of different task t
 
 To override the default "ask" task:
 
-1. Copy: `cp assets/.vibe-tools-square/tasks/ask-demo.conf ~/.vibe-tools-square/tasks/`
-2. Edit: Modify `~/.vibe-tools-square/tasks/ask-demo.conf` with your customizations
+1. Copy: `cp assets/.vibe-tools-square/config/tasks/ask-demo.conf ~/.vibe-tools-square/config/tasks/`
+2. Edit: Modify `~/.vibe-tools-square/config/tasks/ask-demo.conf` with your customizations
 3. Use: Your version will take precedence over the repo version
 
 ## Development Workflow

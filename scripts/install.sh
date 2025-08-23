@@ -272,9 +272,9 @@ install_configuration() {
 
     # Create task directory structure with README only (dynamic discovery handles assets)
     print_step "Creating task directory structure..."
-    mkdir -p "$RUNTIME_HOME/tasks"
-    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/tasks/README.md" ]]; then
-        cp "$PROJECT_ROOT/assets/.vibe-tools-square/tasks/README.md" "$RUNTIME_HOME/tasks/"
+    mkdir -p "$RUNTIME_HOME/config/tasks"
+    if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/config/tasks/README.md" ]]; then
+        cp "$PROJECT_ROOT/assets/.vibe-tools-square/config/tasks/README.md" "$RUNTIME_HOME/config/tasks/"
         print_info "Tasks will be discovered dynamically from assets (runtime precedence)"
     else
         print_error "Task README not found in assets"

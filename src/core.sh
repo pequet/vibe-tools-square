@@ -940,8 +940,8 @@ execute_task() {
     
     # Look for task definition - runtime first, then repo assets
     local task_file=""
-    local runtime_task_file="$VIBE_TOOLS_SQUARE_HOME/tasks/${task_name}.conf"
-    local repo_task_file="$SCRIPT_DIR/assets/.vibe-tools-square/tasks/${task_name}.conf"
+    local runtime_task_file="$VIBE_TOOLS_SQUARE_HOME/config/tasks/${task_name}.conf"
+    local repo_task_file="$SCRIPT_DIR/assets/.vibe-tools-square/config/tasks/${task_name}.conf"
     
     if [[ -f "$runtime_task_file" ]]; then
         task_file="$runtime_task_file"
@@ -950,7 +950,7 @@ execute_task() {
         task_file="$repo_task_file"
         print_info "Using repo task config: $task_file"
     else
-        print_error "Task '$task_name' not found in runtime ($VIBE_TOOLS_SQUARE_HOME/tasks/) or repo (assets/.vibe-tools-square/tasks/)"
+        print_error "Task '$task_name' not found in runtime ($VIBE_TOOLS_SQUARE_HOME/config/tasks/) or repo (assets/.vibe-tools-square/config/tasks/)"
         print_info "Available tasks:"
         list_available_tasks
                     exit 1
@@ -1404,8 +1404,8 @@ run_vibe_command_from_runtime() {
 
 # List available tasks (brief for usage display)
 list_available_tasks() {
-    local runtime_tasks_dir="$VIBE_TOOLS_SQUARE_HOME/tasks"
-    local repo_tasks_dir="$SCRIPT_DIR/assets/.vibe-tools-square/tasks"
+    local runtime_tasks_dir="$VIBE_TOOLS_SQUARE_HOME/config/tasks"
+    local repo_tasks_dir="$SCRIPT_DIR/assets/.vibe-tools-square/config/tasks"
     
     # Track seen tasks to avoid duplicates (runtime takes precedence)
     local seen_tasks=""
@@ -1445,8 +1445,8 @@ list_available_tasks_detailed() {
     print_info "Available Tasks:"
     print_info ""
     
-    local runtime_tasks_dir="$VIBE_TOOLS_SQUARE_HOME/tasks"
-    local repo_tasks_dir="$SCRIPT_DIR/assets/.vibe-tools-square/tasks"
+    local runtime_tasks_dir="$VIBE_TOOLS_SQUARE_HOME/config/tasks"
+    local repo_tasks_dir="$SCRIPT_DIR/assets/.vibe-tools-square/config/tasks"
     
     # Track seen tasks to avoid duplicates (runtime takes precedence)
     local seen_tasks=""
