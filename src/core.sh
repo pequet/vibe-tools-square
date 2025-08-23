@@ -646,9 +646,11 @@ build_vibe_command_args() {
     
     # Add task-specific arguments
     if [[ "$vibe_cmd" == "repo" ]]; then
-        vibe_args+=("--subdir=public")
+        vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
+        print_info "DEBUG: Using --subdir=${ICE_SUBDIR_NAME:-public}"
     elif [[ "$vibe_cmd" == "plan" ]]; then
-        vibe_args+=("--subdir=public")
+        vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
+        print_info "DEBUG: Using --subdir=${ICE_SUBDIR_NAME:-public}"
         # Plan task uses dual models via additional parameters passed after basic ones
         # These will be added by the caller: --fileProvider, --thinkingProvider, --fileModel, --thinkingModel
     fi
@@ -700,7 +702,8 @@ build_plan_command_args() {
     
     # Build plan-specific vibe-tools arguments
     local vibe_args=()
-    vibe_args+=("--subdir=public")
+    vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
+    print_info "DEBUG: Plan using --subdir=${ICE_SUBDIR_NAME:-public}"
     
     # Add dual model arguments
     [[ -n "$file_provider" ]] && vibe_args+=("--fileProvider=$file_provider")
@@ -860,8 +863,8 @@ execute_vibe_command() {
         echo "=== EXECUTION ATTEMPT ===" >> "$log_file"
         echo "Started at: $(date)" >> "$log_file"
         
-        # DEBUG: Log working directory
-        echo "Working directory: $(pwd)" >> "$log_file"
+        # DEBUG: Log working directory BEFORE cd
+        echo "Working directory before cd: $(pwd)" >> "$log_file"
         
         # Escape single quotes correctly for bash using the proven legacy technique
         # Replace each ' with '\''
@@ -886,6 +889,11 @@ execute_vibe_command() {
         # Execute from ICE content directory for deterministic environment
         local prev_dir="$(pwd)"
         cd "$VIBE_TOOLS_SQUARE_HOME/content"
+        
+        # DEBUG: Log actual execution directory
+        echo "ACTUAL vibe-tools execution directory: $(pwd)" >> "$log_file"
+        echo "" >> "$log_file"
+        
         local command_output
         command_output=$(eval "$exec_cmd" 2>&1)
         local exit_code=$?

@@ -24,12 +24,17 @@ prepare_ice() {
     local exclude_arr=()
     local source_dir="${PWD}"
     local ice_root="$VIBE_TOOLS_SQUARE_HOME/content"
-    local target_public="$ice_root/public"
+    local ice_subdir_name="ice"
+    local target_public="$ice_root/$ice_subdir_name"
+    
+    # Export ICE subdirectory name for vibe-tools command
+    export ICE_SUBDIR_NAME="$ice_subdir_name"
     
     print_info "Preparing Isolated Context Environment"
     print_info "Source: $source_dir"
     print_info "ICE Root: $ice_root"
-    print_info "Target (public): $target_public"
+    print_info "Target (ICE): $target_public"
+    print_info "ICE Subdir Name: $ice_subdir_name (exported as ICE_SUBDIR_NAME)"
     
     # Parse include/exclude patterns (Bash 3 compatible)
     while [[ $# -gt 0 ]]; do
@@ -203,7 +208,8 @@ clean_ice_public() {
 
 # Show detailed context listing
 show_context() {
-    local target_public="$VIBE_TOOLS_SQUARE_HOME/content/public"
+    # Use the actual ICE directory that was created, not hardcoded "public"
+    local target_public="$VIBE_TOOLS_SQUARE_HOME/content/${ICE_SUBDIR_NAME:-public}"
     
     if [[ ! -d "$target_public" ]]; then
         print_warning "ICE public directory doesn't exist: $target_public"
@@ -241,14 +247,17 @@ show_context() {
 init_context() {
     print_info "Initializing context system"
     ensure_directory "$VIBE_TOOLS_SQUARE_HOME/content"
-    ensure_directory "$VIBE_TOOLS_SQUARE_HOME/content/public"
+    # ICE directories are now created dynamically in prepare_ice()
     print_info "Context system initialized"
 }
 
 # Capture ICE context information for logging
 capture_ice_context() {
-    local target_public="$VIBE_TOOLS_SQUARE_HOME/content/public"
+    # Use the actual ICE directory that was created, not hardcoded "public"
+    local target_public="$VIBE_TOOLS_SQUARE_HOME/content/${ICE_SUBDIR_NAME:-public}"
     local context_info=""
+    
+    print_info "DEBUG: capture_ice_context looking in: $target_public"
     
     if [[ ! -d "$target_public" ]]; then
         context_info="ICE public directory doesn't exist: $target_public"
