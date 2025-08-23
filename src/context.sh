@@ -54,7 +54,21 @@ prepare_ice() {
         for item in "${include_items[@]}"; do
             item=$(echo "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
             [[ -z "$item" ]] && continue
-            if [[ -e "$source_dir/$item" ]]; then
+            
+            # DEBUG: Show where we're actually looking for files
+            if [[ "$item" == *"*"* ]]; then
+                local pattern_name="${item##*/}"  # Extract filename pattern
+                print_info "  $item -> GLOB PATTERN, searching in: $source_dir"
+                print_info "    find '$source_dir' -name '$pattern_name'"
+                local matching_files=$(find "$source_dir" -name "$pattern_name" 2>/dev/null)
+                local match_count=$(echo "$matching_files" | grep -c . 2>/dev/null || echo "0")
+                print_info "    Found $match_count files"
+                if [[ $match_count -gt 0 ]]; then
+                    echo "$matching_files" | head -3 | while read -r found_file; do
+                        print_info "      $found_file"
+                    done
+                fi
+            elif [[ -e "$source_dir/$item" ]]; then
                 if [[ -d "$source_dir/$item" ]]; then
                     local dir_count=$(find "$source_dir/$item" -type f 2>/dev/null | wc -l | tr -d ' ')
                     print_info "  $item/ -> DIRECTORY (contains $dir_count files)"
@@ -129,9 +143,14 @@ prepare_ice() {
         
         # DEBUG: Always show rsync filters being applied
         print_info "CONTEXT DEBUG: Built rsync filters (${#filters[@]} total):"
-        for f in "${filters[@]}"; do
-            print_info "  $f"
-        done
+        print_info "  EXPLANATION of rsync filter logic:"
+        print_info "    --include=*/           = Include ALL directories (so rsync can traverse into subdirs)"
+        print_info "    --include=/your-pattern = Include files matching your specific patterns" 
+        print_info "    --exclude=*            = Exclude EVERYTHING else not explicitly included above"
+        # print_info "  ACTUAL FILTERS IN ORDER:"
+        # for f in "${filters[@]}"; do
+        #     print_info "    $f"
+        # done
         
         # DEBUG: Show the full rsync command
         print_info "CONTEXT DEBUG: Executing rsync command:"
