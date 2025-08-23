@@ -86,6 +86,9 @@ load_configuration() {
                 print_error "Please add GLOBAL_COMMAND_PREFIX=\"your-prefix\" to default.conf"
                 exit 1
             fi
+            # Set default ICE_SUBDIR_NAME if not specified
+            ICE_SUBDIR_NAME="${ICE_SUBDIR_NAME:-public}"
+            print_info "ICE subdirectory name: $ICE_SUBDIR_NAME"
         else
             print_error "Failed to source default.conf"
             exit 1
@@ -201,8 +204,8 @@ create_runtime_environment() {
 setup_content_directory() {
     print_step "Setting up Isolated Context Environment (ICE)..."
     
-    # Create the public subdirectory in content
-    mkdir -p "$RUNTIME_HOME/content/public"
+    # Create the ICE subdirectory in content (configurable name)
+    mkdir -p "$RUNTIME_HOME/content/$ICE_SUBDIR_NAME"
     
     # Copy vibe-tools.config.json to content directory
     if [[ -f "$PROJECT_ROOT/assets/.vibe-tools-square/content/vibe-tools.config.json" ]]; then

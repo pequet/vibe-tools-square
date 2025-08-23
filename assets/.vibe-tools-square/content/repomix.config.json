@@ -1,7 +1,7 @@
 {
   "version": 1,
   "include": [
-    "public/**/*"
+    "public/**"
   ],
   "exclude": [
     "**/.DS_Store",

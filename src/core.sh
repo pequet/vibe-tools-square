@@ -646,11 +646,9 @@ build_vibe_command_args() {
     
     # Add task-specific arguments
     if [[ "$vibe_cmd" == "repo" ]]; then
-        vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
-        print_info "DEBUG: Using --subdir=${ICE_SUBDIR_NAME:-public}"
+        print_info "DEBUG: Analyzing entire content directory (no --subdir)"
     elif [[ "$vibe_cmd" == "plan" ]]; then
-        vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
-        print_info "DEBUG: Using --subdir=${ICE_SUBDIR_NAME:-public}"
+        print_info "DEBUG: Plan analyzing entire content directory (no --subdir)"
         # Plan task uses dual models via additional parameters passed after basic ones
         # These will be added by the caller: --fileProvider, --thinkingProvider, --fileModel, --thinkingModel
     fi
@@ -702,8 +700,7 @@ build_plan_command_args() {
     
     # Build plan-specific vibe-tools arguments
     local vibe_args=()
-    vibe_args+=("--subdir=${ICE_SUBDIR_NAME:-public}")
-    print_info "DEBUG: Plan using --subdir=${ICE_SUBDIR_NAME:-public}"
+    print_info "DEBUG: Plan analyzing entire content directory (no --subdir)"
     
     # Add dual model arguments
     [[ -n "$file_provider" ]] && vibe_args+=("--fileProvider=$file_provider")

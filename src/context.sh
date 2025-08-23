@@ -24,10 +24,15 @@ prepare_ice() {
     local exclude_arr=()
     local source_dir="${PWD}"
     local ice_root="$VIBE_TOOLS_SQUARE_HOME/content"
-    local ice_subdir_name="ice"
+    # Use ICE_SUBDIR_NAME from config, default to "public" if not set
+    local ice_subdir_name="${ICE_SUBDIR_NAME:-public}"
     local target_public="$ice_root/$ice_subdir_name"
     
-    # Export ICE subdirectory name for vibe-tools command
+    # Export ICE subdirectory name for reference (but don't use --subdir parameter)
+    # BUG DOCUMENTATION: vibe-tools --subdir parameter causes repomix to create output 
+    # files in wrong locations, leading to empty content being processed by AI models.
+    # Solution: Remove --subdir and let vibe-tools analyze entire content directory,
+    # rely on repomix.config.json to determine which files to include/exclude. 🫡
     export ICE_SUBDIR_NAME="$ice_subdir_name"
     
     print_info "Preparing Isolated Context Environment"
@@ -208,7 +213,7 @@ clean_ice_public() {
 
 # Show detailed context listing
 show_context() {
-    # Use the actual ICE directory that was created, not hardcoded "public"
+    # Use the actual ICE subdirectory
     local target_public="$VIBE_TOOLS_SQUARE_HOME/content/${ICE_SUBDIR_NAME:-public}"
     
     if [[ ! -d "$target_public" ]]; then
@@ -253,7 +258,7 @@ init_context() {
 
 # Capture ICE context information for logging
 capture_ice_context() {
-    # Use the actual ICE directory that was created, not hardcoded "public"
+    # Use the actual ICE subdirectory
     local target_public="$VIBE_TOOLS_SQUARE_HOME/content/${ICE_SUBDIR_NAME:-public}"
     local context_info=""
     
