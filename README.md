@@ -1,3 +1,5 @@
+> **Vibe-Tools Square?** It's a compact toolkit for automating common vibe-tools workflows, a "Vibe-Tools Tool", hence the squared notation. The template-driven automation promises to accelerate development and system evolution exponentially. This meta-tool approach aligns perfectly with our framework's meta-system thinking principles. 
+
 # Vibe-Tools Square
 
 Template-driven AI workflow automation. Transform repetitive vibe-tools commands into reusable, parameterized tasks.
@@ -117,5 +119,5 @@ If you find this project useful:
 - [Buy Me a Coffee](https://buymeacoffee.com/pequet)
 - [Sponsor on GitHub](https://github.com/sponsors/pequet)
 
-Your support helps maintain and improve this project. Thank you! 
+Your support helps maintain and improve this project. Thank you!
 
